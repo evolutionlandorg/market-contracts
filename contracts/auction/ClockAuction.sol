@@ -1,6 +1,6 @@
 pragma solidity ^0.4.23;
 
-import "openzeppelin-solidity/contracts/token/ERC721/ERC721.sol";
+import "openzeppelin-solidity/contracts/token/ERC721/ERC721Basic.sol";
 import "./ClockAuctionBase.sol";
 import "openzeppelin-solidity/contracts/lifecycle/Pausable.sol";
 
@@ -17,7 +17,7 @@ contract ClockAuction is Pausable, ClockAuctionBase {
         require(_cut <= 10000);
         ownerCut = _cut;
         
-        ERC721 candidateContract = ERC721(_nftAddress);
+        ERC721Basic candidateContract = ERC721Basic(_nftAddress);
         // InterfaceId_ERC721 = 0x80ac58cd;
         require(candidateContract.supportsInterface(0x80ac58cd));
         nonFungibleContract = candidateContract;
@@ -34,7 +34,7 @@ contract ClockAuction is Pausable, ClockAuctionBase {
             msg.sender == owner ||
             msg.sender == nftAddress
         );
-        nftAddress.transfer(this.balance);
+        nftAddress.transfer(address(this).balance);
     }
 
     /// @dev Creates and begins a new auction.

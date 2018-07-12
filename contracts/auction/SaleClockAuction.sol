@@ -14,7 +14,7 @@ contract SaleClockAuction is ClockAuction {
     uint256[5] public lastGenesisSalePrices;
 
     // Delegate constructor
-    function SaleClockAuction(address _nftAddr, uint256 _cut) public
+    constructor(address _nftAddr, uint256 _cut) public
         ClockAuction(_nftAddr, _cut) {}
 
     /// @dev Creates and begins a new auction.

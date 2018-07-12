@@ -1,6 +1,6 @@
 pragma solidity ^0.4.23;
 
-import "openzeppelin-solidity/contracts/token/ERC721/ERC721.sol";
+import "openzeppelin-solidity/contracts/token/ERC721/ERC721Basic.sol";
 
 /// @title Auction Core
 /// @dev Contains models, variables, and internal methods for the auction.
@@ -22,7 +22,7 @@ contract ClockAuctionBase {
     }
 
     // Reference to contract tracking NFT ownership
-    ERC721 public nonFungibleContract;
+    ERC721Basic public nonFungibleContract;
 
     // Cut owner takes on each auction, measured in basis points (1/100 of a percent).
     // Values 0-10,000 map to 0%-100%
@@ -63,7 +63,7 @@ contract ClockAuctionBase {
     /// @param _tokenId - ID of token whose approval to verify.
     function _escrow(address _owner, uint256 _tokenId) internal {
         // it will throw if transfer fails
-        nonFungibleContract.transferFrom(_owner, this, _tokenId);
+        nonFungibleContract.safeTransferFrom(_owner, this, _tokenId);
     }
 
     /// @dev Transfers an NFT owned by this contract to another address.
@@ -72,7 +72,7 @@ contract ClockAuctionBase {
     /// @param _tokenId - ID of token to transfer.
     function _transfer(address _receiver, uint256 _tokenId) internal {
         // it will throw if transfer fails
-        nonFungibleContract.transferFrom(this, _receiver, _tokenId);
+        nonFungibleContract.safeTransferFrom(this, _receiver, _tokenId);
     }
 
     /// @dev Adds an auction to the list of open auctions. Also fires the
@@ -86,7 +86,7 @@ contract ClockAuctionBase {
 
         tokenIdToAuction[_tokenId] = _auction;
         
-        AuctionCreated(
+        emit AuctionCreated(
             uint256(_tokenId),
             uint256(_auction.startingPrice),
             uint256(_auction.endingPrice),
@@ -98,7 +98,7 @@ contract ClockAuctionBase {
     function _cancelAuction(uint256 _tokenId, address _seller) internal {
         _removeAuction(_tokenId);
         _transfer(_seller, _tokenId);
-        AuctionCancelled(_tokenId);
+        emit AuctionCancelled(_tokenId);
     }
 
     /// @dev Computes the price and transfers winnings.
@@ -149,7 +149,7 @@ contract ClockAuctionBase {
         }
 
         // Tell the world!
-        AuctionSuccessful(_tokenId, price, msg.sender);
+        emit AuctionSuccessful(_tokenId, price, msg.sender);
 
         return price;
     }
