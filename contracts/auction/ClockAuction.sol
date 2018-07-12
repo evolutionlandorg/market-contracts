@@ -2,7 +2,7 @@ pragma solidity ^0.4.23;
 
 import "openzeppelin-solidity/contracts/token/ERC721/ERC721.sol";
 import "./ClockAuctionBase.sol";
-import "zeppelin-solidity/contracts/lifecycle/Pausable.sol";
+import "openzeppelin-solidity/contracts/lifecycle/Pausable.sol";
 
 /// @title Clock auction for non-fungible tokens.
 contract ClockAuction is Pausable, ClockAuctionBase {

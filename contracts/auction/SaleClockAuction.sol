@@ -62,7 +62,7 @@ contract SaleClockAuction is ClockAuction {
         if (seller == address(nonFungibleContract)) {
             // Track gen0 sale prices
             lastGenesisSalePrices[genesisSaleCount % 5] = price;
-            gen0SaleCount++;
+            genesisSaleCount++;
         }
     }
 

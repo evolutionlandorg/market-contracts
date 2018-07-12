@@ -72,7 +72,7 @@ contract ClockAuctionBase {
     /// @param _tokenId - ID of token to transfer.
     function _transfer(address _receiver, uint256 _tokenId) internal {
         // it will throw if transfer fails
-        nonFungibleContract.transfer(_receiver, _tokenId);
+        nonFungibleContract.transferFrom(this, _receiver, _tokenId);
     }
 
     /// @dev Adds an auction to the list of open auctions. Also fires the
