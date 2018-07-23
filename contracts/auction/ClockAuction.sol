@@ -13,10 +13,12 @@ contract ClockAuction is Pausable, ClockAuctionBase {
     ///  the Nonfungible Interface.
     /// @param _cut - percent cut the owner takes on each auction, must be
     ///  between 0-10,000.
-    constructor(address _nftAddress, uint256 _cut) public {
+    constructor(address ring, address _nftAddress, uint256 _cut) public {
         require(_cut <= 10000);
         ownerCut = _cut;
-        
+        //TODO: initialize RING address
+        RING = ring;
+
         ERC721Basic candidateContract = ERC721Basic(_nftAddress);
         // InterfaceId_ERC721 = 0x80ac58cd;
         require(candidateContract.supportsInterface(0x80ac58cd));
@@ -34,7 +36,9 @@ contract ClockAuction is Pausable, ClockAuctionBase {
             msg.sender == owner ||
             msg.sender == nftAddress
         );
-        nftAddress.transfer(address(this).balance);
+        // TODO: change this to transfer in RING
+        uint balance = RING.balanceOf(address(this));
+        RING.transfer(msg.sender,balance);
     }
 
     /// @dev Creates and begins a new auction.
