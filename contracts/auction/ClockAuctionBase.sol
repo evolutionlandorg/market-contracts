@@ -1,6 +1,7 @@
 pragma solidity ^0.4.23;
 
 import "openzeppelin-solidity/contracts/token/ERC721/ERC721Basic.sol";
+import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 
 /// @title Auction Core
 /// @dev Contains models, variables, and internal methods for the auction.
@@ -22,7 +23,11 @@ contract ClockAuctionBase {
     }
 
     // Reference to contract tracking NFT ownership
+    // refer to land contract here
     ERC721Basic public nonFungibleContract;
+
+    //TODO: add RING address here
+    ERC20 public RING;
 
     // Cut owner takes on each auction, measured in basis points (1/100 of a percent).
     // Values 0-10,000 map to 0%-100%
@@ -63,6 +68,8 @@ contract ClockAuctionBase {
     /// @param _tokenId - ID of token whose approval to verify.
     function _escrow(address _owner, uint256 _tokenId) internal {
         // it will throw if transfer fails
+        // TODO: safeTransferFrom will check onERC721Received(...) for final check
+        // 👆that means need to add onERC721Received(...) in Auction contract
         nonFungibleContract.safeTransferFrom(_owner, this, _tokenId);
     }
 
@@ -145,7 +152,8 @@ contract ClockAuctionBase {
             // before calling transfer(), and the only thing the seller
             // can DoS is the sale of their own asset! (And if it's an
             // accident, they can call cancelAuction(). )
-            seller.transfer(sellerProceeds);
+            // TODO: change this to RING
+            RING.transfer(seller, sellerProceeds);
         }
 
         // Tell the world!
@@ -243,5 +251,18 @@ contract ClockAuctionBase {
         //  function is always guaranteed to be <= _price.
         return _price * ownerCut / 10000;
     }
+
+    // @dev this is safeTransferFrom(...) to check the receiver if it is a contract address
+    function onERC721Received(
+        address _operator,
+        address _from,
+        uint256 _tokenId,
+        bytes _data
+    )
+    public
+    returns(bytes4) {
+        return this.onERC721Received.selector;
+    }
+
 
 }
