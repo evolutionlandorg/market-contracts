@@ -33,7 +33,7 @@ contract ClockAuctionBase {
     uint256 public ownerCut;
 
     // Map from token ID to their corresponding auction.
-    mapping (uint256 => Auction) tokenIdToAuction;
+    mapping(uint256 => Auction) tokenIdToAuction;
 
     //add address of RING
     ERC20 RING;
@@ -115,7 +115,6 @@ contract ClockAuctionBase {
     }
 
 
-
     /// @dev Removes an auction from the list of open auctions.
     /// @param _tokenId - ID of NFT on auction.
     function _removeAuction(uint256 _tokenId) internal {
@@ -130,9 +129,9 @@ contract ClockAuctionBase {
 
     // @dev return current price in ETH
     function _currentPriceETH(Auction storage _auction)
-        internal
-        view
-        returns (uint256) {
+    internal
+    view
+    returns (uint256) {
         return (_currentPriceInRING(_auction) / getExchangeRate());
     }
 
@@ -141,9 +140,9 @@ contract ClockAuctionBase {
     ///  structure, and the other that does the price computation) so we
     ///  can easily test that the price computation works correctly.
     function _currentPriceInRING(Auction storage _auction)
-        internal
-        view
-        returns (uint256)
+    internal
+    view
+    returns (uint256)
     {
         uint256 secondsPassed = 0;
 
@@ -172,9 +171,9 @@ contract ClockAuctionBase {
         uint256 _duration,
         uint256 _secondsPassed
     )
-        internal
-        pure
-        returns (uint256)
+    internal
+    pure
+    returns (uint256)
     {
         // NOTE: We don't use SafeMath (or similar) in this function because
         //  all of our public functions carefully cap the maximum values for
@@ -215,22 +214,19 @@ contract ClockAuctionBase {
     }
 
 
-    // TODO: set tokenVendor address
     function _setTokenVendor(address _tokenVendor) internal {
         tokenVendor = TokenVendor(_tokenVendor);
     }
 
-    //TODO: set RING
     function _setRING(address _ring) internal {
         RING = ERC20(_ring);
     }
 
 
-    // TODO: getexchangerate from tokenVendor
+    //  getexchangerate from tokenVendor
     function getExchangeRate() public returns (uint256){
         return tokenVendor.buyTokenRate();
     }
-
 
 
 }

@@ -12,9 +12,7 @@ contract ClockAuction is Pausable, ClockAuctionBase {
     /// @param _nftAddress - address of a deployed contract implementing
     ///  the Nonfungible Interface.
     /// @param _cut - percent cut the owner takes on each auction, must be
-    ///  between 0-10,000.
-    // TODO: add tokenVendor addess
-    // TODO: add RING address
+    ///  between 0-10,000. It can be considered as transaction fee.
     constructor(address _nftAddress, uint256 _cut) public {
         require(_cut <= 10000);
         ownerCut = _cut;
@@ -28,7 +26,7 @@ contract ClockAuction is Pausable, ClockAuctionBase {
 
     /// @dev Creates and begins a new auction.
     /// @param _tokenId - ID of token to auction, sender must be owner.
-    // TODO: change _startingPrice and _endingPrice in from wei to ring for user-friendly reason
+    //  NOTE: change _startingPrice and _endingPrice in from wei to ring for user-friendly reason
     /// @param _startingPriceInRING - Price of item (in ring) at beginning of auction.
     /// @param _endingPriceInRING - Price of item (in ring) at end of auction.
     /// @param _duration - Length of time to move between starting
