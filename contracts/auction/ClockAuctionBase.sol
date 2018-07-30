@@ -1,19 +1,23 @@
 pragma solidity ^0.4.23;
 
 import "openzeppelin-solidity/contracts/token/ERC721/ERC721Basic.sol";
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
+import "./ITokenVendor.sol";
+
 
 /// @title Auction Core
 /// @dev Contains models, variables, and internal methods for the auction.
 contract ClockAuctionBase {
-
+    using SafeMath for *;
     // Represents an auction on an NFT
     struct Auction {
         // Current owner of NFT
         address seller;
-        // Price (in wei) at beginning of auction
-        uint128 startingPrice;
-        // Price (in wei) at end of auction
-        uint128 endingPrice;
+        // Price (in RING) at beginning of auction
+        uint128 startingPriceInRING;
+        // Price (in RING) at end of auction
+        uint128 endingPriceInRING;
         // Duration (in seconds) of auction
         uint64 duration;
         // Time when auction started
@@ -31,9 +35,18 @@ contract ClockAuctionBase {
     // Map from token ID to their corresponding auction.
     mapping (uint256 => Auction) tokenIdToAuction;
 
-    event AuctionCreated(uint256 tokenId, uint256 startingPrice, uint256 endingPrice, uint256 duration);
+    //add address of RING
+    ERC20 RING;
+
+    // address of tokenvendor which exchange eth to ring or ring to eth
+    TokenVendor public tokenVendor;
+
+    event AuctionCreated(uint256 tokenId, uint256 startingPriceInRING, uint256 endingPriceInRING, uint256 duration);
     event AuctionSuccessful(uint256 tokenId, uint256 totalPrice, address winner);
     event AuctionCancelled(uint256 tokenId);
+
+    // claimedToken event
+    event ClaimedTokens(address indexed _token, address indexed _owner, uint _amount);
 
     /// @dev DON'T give me your money.
     function() external {}
@@ -85,11 +98,11 @@ contract ClockAuctionBase {
         require(_auction.duration >= 1 minutes);
 
         tokenIdToAuction[_tokenId] = _auction;
-        
+
         emit AuctionCreated(
             uint256(_tokenId),
-            uint256(_auction.startingPrice),
-            uint256(_auction.endingPrice),
+            uint256(_auction.startingPriceInRING),
+            uint256(_auction.endingPriceInRING),
             uint256(_auction.duration)
         );
     }
@@ -101,58 +114,7 @@ contract ClockAuctionBase {
         emit AuctionCancelled(_tokenId);
     }
 
-    /// @dev Computes the price and transfers winnings.
-    /// Does NOT transfer ownership of token.
-    function _bid(uint256 _tokenId, uint256 _bidAmount)
-        internal
-        returns (uint256)
-    {
-        // Get a reference to the auction struct
-        Auction storage auction = tokenIdToAuction[_tokenId];
 
-        // Explicitly check that this auction is currently live.
-        // (Because of how Ethereum mappings work, we can't just count
-        // on the lookup above failing. An invalid _tokenId will just
-        // return an auction object that is all zeros.)
-        require(_isOnAuction(auction));
-
-        // Check that the incoming bid is higher than the current
-        // price
-        uint256 price = _currentPrice(auction);
-        require(_bidAmount >= price);
-
-        // Grab a reference to the seller before the auction struct
-        // gets deleted.
-        address seller = auction.seller;
-
-        // The bid is good! Remove the auction before sending the fees
-        // to the sender so we can't have a reentrancy attack.
-        _removeAuction(_tokenId);
-
-        // Transfer proceeds to seller (if there are any!)
-        if (price > 0) {
-            //  Calculate the auctioneer's cut.
-            // (NOTE: _computeCut() is guaranteed to return a
-            //  value <= price, so this subtraction can't go negative.)
-            uint256 auctioneerCut = _computeCut(price);
-            uint256 sellerProceeds = price - auctioneerCut;
-
-            // NOTE: Doing a transfer() in the middle of a complex
-            // method like this is generally discouraged because of
-            // reentrancy attacks and DoS attacks if the seller is
-            // a contract with an invalid fallback function. We explicitly
-            // guard against reentrancy attacks by removing the auction
-            // before calling transfer(), and the only thing the seller
-            // can DoS is the sale of their own asset! (And if it's an
-            // accident, they can call cancelAuction(). )
-            seller.transfer(sellerProceeds);
-        }
-
-        // Tell the world!
-        emit AuctionSuccessful(_tokenId, price, msg.sender);
-
-        return price;
-    }
 
     /// @dev Removes an auction from the list of open auctions.
     /// @param _tokenId - ID of NFT on auction.
@@ -166,17 +128,25 @@ contract ClockAuctionBase {
         return (_auction.startedAt > 0);
     }
 
+    // @dev return current price in ETH
+    function _currentPriceETH(Auction storage _auction)
+        internal
+        view
+        returns (uint256) {
+        return (_currentPriceInRING(_auction) / getExchangeRate());
+    }
+
     /// @dev Returns current price of an NFT on auction. Broken into two
     ///  functions (this one, that computes the duration from the auction
     ///  structure, and the other that does the price computation) so we
     ///  can easily test that the price computation works correctly.
-    function _currentPrice(Auction storage _auction)
+    function _currentPriceInRING(Auction storage _auction)
         internal
         view
         returns (uint256)
     {
         uint256 secondsPassed = 0;
-        
+
         // A bit of insurance against negative values (or wraparound).
         // Probably not necessary (since Ethereum guarnatees that the
         // now variable doesn't ever go backwards).
@@ -184,9 +154,9 @@ contract ClockAuctionBase {
             secondsPassed = now - _auction.startedAt;
         }
 
-        return _computeCurrentPrice(
-            _auction.startingPrice,
-            _auction.endingPrice,
+        return _computeCurrentPriceInRING(
+            _auction.startingPriceInRING,
+            _auction.endingPriceInRING,
             _auction.duration,
             secondsPassed
         );
@@ -196,9 +166,9 @@ contract ClockAuctionBase {
     ///  from _currentPrice so we can run extensive unit tests.
     ///  When testing, make this function public and turn on
     ///  `Current price computation` test suite.
-    function _computeCurrentPrice(
-        uint256 _startingPrice,
-        uint256 _endingPrice,
+    function _computeCurrentPriceInRING(
+        uint256 _startingPriceInRING,
+        uint256 _endingPriceInRING,
         uint256 _duration,
         uint256 _secondsPassed
     )
@@ -214,22 +184,22 @@ contract ClockAuctionBase {
         if (_secondsPassed >= _duration) {
             // We've reached the end of the dynamic pricing portion
             // of the auction, just return the end price.
-            return _endingPrice;
+            return _endingPriceInRING;
         } else {
             // Starting price can be higher than ending price (and often is!), so
             // this delta can be negative.
-            int256 totalPriceChange = int256(_endingPrice) - int256(_startingPrice);
-            
+            int256 totalPriceInRINGChange = int256(_endingPriceInRING) - int256(_startingPriceInRING);
+
             // This multiplication can't overflow, _secondsPassed will easily fit within
             // 64-bits, and totalPriceChange will easily fit within 128-bits, their product
             // will always fit within 256-bits.
-            int256 currentPriceChange = totalPriceChange * int256(_secondsPassed) / int256(_duration);
-            
+            int256 currentPriceInRINGChange = totalPriceInRINGChange * int256(_secondsPassed) / int256(_duration);
+
             // currentPriceChange can be negative, but if so, will have a magnitude
             // less that _startingPrice. Thus, this result will always end up positive.
-            int256 currentPrice = int256(_startingPrice) + currentPriceChange;
-            
-            return uint256(currentPrice);
+            int256 currentPriceInRING = int256(_startingPriceInRING) + currentPriceInRINGChange;
+
+            return uint256(currentPriceInRING);
         }
     }
 
@@ -243,5 +213,24 @@ contract ClockAuctionBase {
         //  function is always guaranteed to be <= _price.
         return _price * ownerCut / 10000;
     }
+
+
+    // TODO: set tokenVendor address
+    function _setTokenVendor(address _tokenVendor) internal {
+        tokenVendor = TokenVendor(_tokenVendor);
+    }
+
+    //TODO: set RING
+    function _setRING(address _ring) internal {
+        RING = ERC20(_ring);
+    }
+
+
+    // TODO: getexchangerate from tokenVendor
+    function getExchangeRate() public returns (uint256){
+        return tokenVendor.buyTokenRate();
+    }
+
+
 
 }
