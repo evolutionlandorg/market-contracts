@@ -12,13 +12,11 @@ contract BidAuctionETH is Pausable, ClockAuctionBase {
     /// @param _nftAddress - address of a deployed contract implementing
     ///  the Nonfungible Interface.
     /// @param _cut - percent cut the owner takes on each auction, must be
-    ///  between 0-10,000.
-    // TODO: add tokenVendor addess
-    // TODO: add RING address
+    ///  between 0-10,000. It can be considered as transaction fee.
     constructor(address _nftAddress, address _RING, address _tokenVendor, uint256 _cut) public {
         require(_cut <= 10000);
         ownerCut = _cut;
-        
+
         ERC721Basic candidateContract = ERC721Basic(_nftAddress);
         // InterfaceId_ERC721 = 0x80ac58cd;
         require(candidateContract.supportsInterface(0x80ac58cd));
@@ -27,7 +25,6 @@ contract BidAuctionETH is Pausable, ClockAuctionBase {
         tokenVendor = TokenVendor(_tokenVendor);
     }
 
-    // TODO: modified the withdraw function
     /// @notice This method can be used by the owner to extract mistakenly
     ///  sent tokens to this contract.
     /// @param _token The address of the token contract that you want to recover
@@ -49,9 +46,9 @@ contract BidAuctionETH is Pausable, ClockAuctionBase {
     ///  ownership of the NFT if enough Ether is supplied.
     /// @param _tokenId - ID of token to bid on.
     function bid(uint256 _tokenId)
-        public
-        payable
-        whenNotPaused
+    public
+    payable
+    whenNotPaused
     {
         // _bid will throw if the bid or funds transfer fails
         _bid(_tokenId, msg.value);
@@ -93,7 +90,7 @@ contract BidAuctionETH is Pausable, ClockAuctionBase {
         // Transfer proceeds to seller (if there are any!)
         if (priceInRING > 0) {
             // assure that this get ring back from tokenVendor
-            require(tokenVendor.call.value(_bidAmount)(bytes4(keccak256("buyToken(address)")),address(this)));
+            require(tokenVendor.buyToken.value(_bidAmount)(address(this)));
             //  Calculate the auctioneer's cut.
             // (NOTE: _computeCut() is guaranteed to return a
             //  value <= price, so this subtraction can't go negative.)
@@ -112,12 +109,10 @@ contract BidAuctionETH is Pausable, ClockAuctionBase {
     }
 
 
-    // TODO: set tokenVendor and only Owner can do this
     function setTokenVendor(address _tokenVendor) public onlyOwner {
         _setTokenVendor(_tokenVendor);
     }
 
-    // TODO: set RING and only Owner can do this
     function setRING(address _ring) public onlyOwner {
         _setRING(_ring);
     }
