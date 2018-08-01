@@ -1,7 +1,10 @@
 # market-contracts
 
+## 拍卖合约
+`ClockAuction.sol`
+
 ## 初始化相关
-在各合约的构造器中涉及到下列参数的一个或多个，其意义分别是：
+在合约的构造器中涉及到的参数，其意义分别是：
 1. address _nftAddress: LAND合约地址
 2. address _RING: RING合约地址
 3. address _tokenVendor: ETH和RING相互转换的TokenVendor合约地址
@@ -29,13 +32,13 @@
 使用`clockAunction.sol`中`getCurrentPriceInRING`方法
 
 ### 5. 使用RING来竞拍地块
-发送要竞拍某次拍卖使用的RING的数量，到`BidAuctionRING`合约中，使用RING.transfer(address(BidAuctionRING),ringAmount,bytes(tokenId))即可
+发送要竞拍某次拍卖使用的RING的数量，到`clockAunction`合约中，使用RING.transfer(address(BidAuctionRING),ringAmount,bytes(tokenId))即可
 
 **注意**：需要把tokenId转换成bytes格式
 
 ### 6. 使用ETH来竞拍地块
-使用`BidAuctionETH.sol`中的`bid`方法
+使用`clockAunction.sol`中的`bidWithETH`方法
 
 
 ## 提币相关
-使用`BidAuctionETH.sol`和`BidAuctionRING.sol`中的`claimTokens`方法
+使用`clockAunction.sol`中的`claimTokens`方法

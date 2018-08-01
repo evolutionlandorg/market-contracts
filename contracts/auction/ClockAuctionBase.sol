@@ -95,7 +95,7 @@ contract ClockAuctionBase {
     function _addAuction(uint256 _tokenId, Auction _auction) internal {
         // Require that all auctions have a duration of
         // at least one minute. (Keeps our math from getting hairy!)
-        require(_auction.duration >= 1 minutes);
+        require(_auction.duration >= 1 minutes, "duration must be at least 1 minutes");
 
         tokenIdToAuction[_tokenId] = _auction;
 
@@ -227,6 +227,7 @@ contract ClockAuctionBase {
     function getExchangeRate() public returns (uint256){
         return tokenVendor.buyTokenRate();
     }
+
 
 
 }
