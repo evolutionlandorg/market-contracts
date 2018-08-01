@@ -114,7 +114,7 @@ contract ClockAuction is AuctionRelated {
             // assure it can be converted into uint256 correctly
             require(_data.length == 32);
             uint256 tokenId = bytesToUint256(_data);
-            require(tokenId != 0);
+
             _bidWithRING(_from, tokenId, _valueInRING);
             _transfer(_from, tokenId);
         }
