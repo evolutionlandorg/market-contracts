@@ -13,12 +13,13 @@
 
 ## 拍卖操作相关
 ### 1. 创建拍卖
-使用`clockAuction.sol`中的`createAuction`方法，传入参数为：
-1. `_tokenId`: 地块的tokenId
-2. `_startingPriceInRING`: 起始价格（ring）
-3. `_endingPriceInRING`: 终止价格(ring)，其实价格比终止价格高
-4. `_duration`: 拍卖持续时间，以秒为单位
-5. `_seller`: 卖方(或者地块拥有者指定的地块拍卖的受益人)
+使用LAND合约中的`approveAndCall`方法，传入参数为：
+1. `_to`: 拍卖合约地址
+2. `_tokenId`: 地块的tokenId
+3. `_startingPriceInRING`: 起始价格（ring）
+4. `_endingPriceInRING`: 终止价格(ring)，其实价格比终止价格高
+5. `_duration`: 拍卖持续时间，以秒为单位
+6. `_seller`: 卖方(或者地块拥有者指定的地块拍卖的受益人)
 
 ### 2. 取消拍卖
 使用`clockAunction.sol`中`cancelAuction`方法
