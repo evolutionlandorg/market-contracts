@@ -130,20 +130,32 @@ contract AuctionRelated is Pausable, ClockAuctionBase {
         _setRING(_ring);
     }
 
+    //@dev only NFT contract can invoke this
+    //@param _from - owner of _tokenId
     function receiveApproval(
         address _from,
         uint256 _tokenId,
-        uint256 _startingPriceInRING,
-        uint256 _endingPriceInRING,
-        uint256 _duration,
-        address _seller)
+        bytes _extraData)
     public
     whenNotPaused
-    canBeStoredWith128Bits(_startingPriceInRING)
-    canBeStoredWith128Bits(_endingPriceInRING)
-    canBeStoredWith64Bits(_duration) {
+    {
         require(msg.sender == address(nonFungibleContract));
-        _createAuction(_from, _tokenId, _startingPriceInRING, _endingPriceInRING, _duration, _seller);
+
+        uint256 startingPriceInRING;
+        uint256 endingPriceInRING;
+        uint256 duration;
+        address seller;
+
+        assembly {
+            let ptr := mload(0x40)
+            calldatacopy(ptr, 0, calldatasize)
+            startingPriceInRING := mload(add(ptr,132))
+            endingPriceInRING := mload(add(ptr,164))
+            duration := mload(add(ptr,196))
+            seller := mload(add(ptr,228))
+        }
+
+        _createAuction(_from, _tokenId, startingPriceInRING, endingPriceInRING, duration, seller);
     }
 
 
