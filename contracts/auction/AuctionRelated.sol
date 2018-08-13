@@ -158,5 +158,4 @@ contract AuctionRelated is Pausable, ClockAuctionBase {
         _createAuction(_from, _tokenId, startingPriceInRING, endingPriceInRING, duration, seller);
     }
 
-
 }
