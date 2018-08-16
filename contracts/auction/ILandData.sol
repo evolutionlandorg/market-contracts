@@ -1,6 +1,6 @@
 pragma solidity ^0.4.23;
 
-interface LandData {
+interface ILandData {
 
     function addLandPixel(
         int64 _x,

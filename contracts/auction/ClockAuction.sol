@@ -11,7 +11,6 @@ contract ClockAuction is AuctionRelated {
     /// @param _cut - percent cut the owner takes on each auction, must be
     ///  between 0-10,000. It can be considered as transaction fee.
     /// @param _waitingMinutes - biggest waiting time from a bid's starting to ending(in minutes)
-    //TODO: add _waitingMinutes
     constructor(address _nftAddress, address _RING, address _tokenVendor, uint256 _cut, uint256 _waitingMinutes) public {
         require(_cut <= 10000);
         ownerCut = _cut;
@@ -20,8 +19,8 @@ contract ClockAuction is AuctionRelated {
         // InterfaceId_ERC721 = 0x80ac58cd;
         require(candidateContract.supportsInterface(0x80ac58cd));
         nonFungibleContract = candidateContract;
-        RING = ERC20(_RING);
-        tokenVendor = TokenVendor(_tokenVendor);
+        _setRING(_RING);
+        _setTokenVendor(_tokenVendor);
         _setBidWaitingTime(_waitingMinutes);
     }
 
@@ -52,7 +51,6 @@ contract ClockAuction is AuctionRelated {
     {
         // _bid will throw if the bid or funds transfer fails
         _bidWithETH(_tokenId, msg.value, msg.sender);
-        _transfer(msg.sender, _tokenId);
     }
 
 
@@ -80,60 +78,21 @@ contract ClockAuction is AuctionRelated {
         require(_bidAmount >= priceInETH,
             "your offer is lower than the current price, try again with a higher one.");
 
-        // if no one has bidden for auction, priceInRING is computed through linear operation
-        // if someone has already bidden for it before, priceInRING is last bidder's offer
-        uint priceInRING = _currentPriceInRING(auction);
-        require(priceInRING < 340282366920938463463374607431768211455);
-
-        // TODO: record last bidder's info
-        // last bidder's info
-        address lastBidder;
-        // last bidder's price
-        uint lastRecord;
-
-        if (lastBidder != 0x0) {
-            lastBidder = auction.lastBidder;
-            lastRecord = uint256(auction.lastRecord);
-        }
-
-        // TODO: modify bid-related member variables
-        // modify bid-related member variables
-        uint bidMoment = now;
-        auction.lastBidder = _buyer;
-        auction.lastRecord = uint128(priceInRING);
-        auction.lastBidStartAt = bidMoment;
-
-        // Grab a reference to the seller before the auction struct
-        // gets deleted.
-        address seller = auction.seller;
-
-
         // assure that this get ring back from tokenVendor
         require(tokenVendor.buyToken.value(_bidAmount)(address(this)));
 
-        // the first bid
-        if (lastBidder == 0x0 && priceInRING > 0) {
-            //  Calculate the auctioneer's cut.
-            // (NOTE: _computeCut() is guaranteed to return a
-            //  value <= price, so this subtraction can't go negative.)
-            uint256 sellerProceedsInRING = priceInRING - _computeCut(priceInRING);
-            // transfer to the seller
-            RING.transfer(seller, sellerProceedsInRING);
-        }
+        // if no one has bidden for auction, priceInRING is computed through linear operation
+        // if someone has already bidden for it before, priceInRING is last bidder's offer
+        uint priceInRING = _currentPriceInRING(auction);
 
-        //  not the first bid
-        if (lastRecord > 0 && lastBidder != 0x0) {
-            uint extraForEach = (priceInRING - lastRecord) / 2;
-            uint realReturn = extraForEach - _computeCut(extraForEach);
-            RING.transfer(seller,realReturn);
-            RING.transfer(lastBidder,(realReturn + lastRecord));
-        }
+        uint bidMoment = _buyProcess(_buyer, auction, priceInRING);
 
         // Tell the world!
         emit NewBid(_tokenId, _buyer, priceInRING, bidMoment);
 
         return priceInRING;
     }
+
 
 
     // here to handle bid for LAND(NFT) using RING
@@ -147,7 +106,6 @@ contract ClockAuction is AuctionRelated {
             uint256 tokenId = bytesToUint256(_data);
 
             _bidWithRING(_from, tokenId, _valueInRING);
-            _transfer(_from, tokenId);
         }
 
     }
@@ -158,16 +116,16 @@ contract ClockAuction is AuctionRelated {
         // Get a reference to the auction struct
         Auction storage auction = tokenIdToAuction[_tokenId];
 
-       require(_isOnAuction(auction));
+        require(_isOnAuction(auction));
         // at least bidWaitingTime after last bidder's bid moment,
         // and no one else has bidden during this bidWaitingTime,
         // then any one can claim this token(land) for lastBidder.
         require(now >= auction.lastBidStartAt + bidWaitingTime,
-        "this auction has not finished yet, try again later");
+            "this auction has not finished yet, try again later");
         //prevent re-entry attack
         _removeAuction(_tokenId);
 
-        nonFungibleContract.safeTransferFrom(this, auction.lastBidder, _tokenId);
+        _transfer(auction.lastBidder, _tokenId);
 
         emit AuctionSuccessful(_tokenId, auction.lastRecord, auction.lastBidder);
     }
@@ -182,52 +140,65 @@ contract ClockAuction is AuctionRelated {
 
         // Check that the incoming bid is higher than the current price
         uint priceInRING = _currentPriceInRING(auction);
-        require (_valueInRING >= priceInRING,
+        require(_valueInRING >= priceInRING,
             "your offer is lower than the current price, try again with a higher one.");
 
-        // TODO: record last bidder's info
-        // last bidder's info
-        address lastBidder;
-        // last bidder's price
-        uint lastRecord;
-
-        if (lastBidder != 0x0) {
-            lastBidder = auction.lastBidder;
-            lastRecord = uint256(auction.lastRecord);
-        }
-
-        // TODO: modify bid-related member variables
-        // modify bid-related member variables
-        uint bidMoment = now;
-        auction.lastBidder = _from;
-        auction.lastRecord = uint128(priceInRING);
-        auction.lastBidStartAt = bidMoment;
-
-        // Grab a reference to the seller before the auction struct
-        // gets deleted.
-        address seller = auction.seller;
-
-        if (lastBidder == 0x0 && priceInRING > 0) {
-            //  Calculate the auctioneer's cut.
-            // (NOTE: _computeCut() is guaranteed to return a
-            //  value <= price, so this subtraction can't go negative.)
-            uint256 sellerProceedsInRING = priceInRING - _computeCut(priceInRING);
-            // transfer to the seller
-            RING.transfer(seller, sellerProceedsInRING);
-        }
-
-        //  not the first bid
-        if (lastRecord > 0 && lastBidder != 0x0) {
-            uint extraForEach = (priceInRING - lastRecord) / 2;
-            uint realReturn = extraForEach - _computeCut(extraForEach);
-            RING.transfer(seller,realReturn);
-            RING.transfer(lastBidder,(realReturn + lastRecord));
-        }
+        uint bidMoment = _buyProcess(_from, auction, priceInRING);
 
         // Tell the world!
         emit NewBid(_tokenId, _from, priceInRING, bidMoment);
 
         return priceInRING;
+    }
+
+    function _buyProcess(address _buyer, Auction storage _auction, uint _priceInRING)
+    internal
+    canBeStoredWith128Bits(_priceInRING)
+    returns (uint256){
+
+        // last bidder's info
+        address lastBidder;
+        // last bidder's price
+        uint lastRecord;
+
+        if (_auction.lastBidder != 0x0) {
+            lastBidder = _auction.lastBidder;
+            lastRecord = uint256(_auction.lastRecord);
+        }
+
+        // modify bid-related member variables
+        uint bidMoment = now;
+        _auction.lastBidder = _buyer;
+        _auction.lastRecord = uint128(_priceInRING);
+        _auction.lastBidStartAt = bidMoment;
+
+        // Grab a reference to the seller before the auction struct
+        // gets deleted.
+        address seller = _auction.seller;
+
+        // the first bid
+        if (lastBidder == 0x0 && _priceInRING > 0) {
+            //  Calculate the auctioneer's cut.
+            // (NOTE: _computeCut() is guaranteed to return a
+            //  value <= price, so this subtraction can't go negative.)
+            uint256 sellerProceedsInRING = _priceInRING - _computeCut(_priceInRING);
+            // transfer to the seller
+            RING.transfer(seller, sellerProceedsInRING);
+        }
+
+        // TODO: the math calculation needs further check
+        //  not the first bid
+        if (lastRecord > 0 && lastBidder != 0x0) {
+            // _priceInRING that is larger than lastRecord
+            // was assured in _currentPriceInRING(_auction)
+            // here double check
+            uint extraForEach = (_priceInRING.sub(lastRecord)) / 2;
+            uint realReturn = extraForEach.sub(_computeCut(extraForEach));
+            RING.transfer(seller, realReturn);
+            RING.transfer(lastBidder, (realReturn + lastRecord));
+        }
+
+        return bidMoment;
     }
 
 
@@ -244,7 +215,6 @@ contract ClockAuction is AuctionRelated {
         }
         return uint256(out);
     }
-
 
 
 }

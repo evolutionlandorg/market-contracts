@@ -1,7 +1,7 @@
 pragma solidity ^0.4.23;
 
 
-interface TokenVendor {
+interface ITokenVendor {
 
 
     function buyTokenRate() public returns (uint256);

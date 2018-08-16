@@ -24,7 +24,6 @@ contract ClockAuctionBase {
         // NOTE: 0 if this auction has been concluded
         uint64 startedAt;
 
-        // TODO: add attributes related to bid
         // it saves gas in this order
         // highest offered price (in RING)
         uint128 lastRecord;
@@ -48,9 +47,8 @@ contract ClockAuctionBase {
     ERC20 public RING;
 
     // address of tokenvendor which exchange eth to ring or ring to eth
-    TokenVendor public tokenVendor;
+    ITokenVendor public tokenVendor;
 
-    //  TODO: add bidWaitingTime
     // necessary period of time from invoking bid action to successfully taking the land asset.
     // if someone else bid the same auction with higher price and within bidWaitingTime, your bid failed.
     uint public bidWaitingTime;
@@ -64,7 +62,7 @@ contract ClockAuctionBase {
     // claimedToken event
     event ClaimedTokens(address indexed token, address indexed owner, uint amount);
 
-    //TODO: new bid event
+    // new bid event
     event NewBid(uint256 indexed tokenId, address lastBidder, uint256 lastRecord, uint256 bidStartAt);
 
     /// @dev DON'T give me your money.
@@ -168,7 +166,6 @@ contract ClockAuctionBase {
         // A bit of insurance against negative values (or wraparound).
         // Probably not necessary (since Ethereum guarnatees that the
         // now variable doesn't ever go backwards).
-        // TODO: modify currentPriceINRING logic
         if (now > _auction.startedAt) {
             secondsPassed = now - _auction.startedAt;
         }
@@ -244,7 +241,7 @@ contract ClockAuctionBase {
 
 
     function _setTokenVendor(address _tokenVendor) internal {
-        tokenVendor = TokenVendor(_tokenVendor);
+        tokenVendor = ITokenVendor(_tokenVendor);
     }
 
     function _setRING(address _ring) internal {
@@ -252,7 +249,6 @@ contract ClockAuctionBase {
     }
 
 
-    //TODO: add _setBidWaitingTime
     function _setBidWaitingTime(uint _waitingMinutes) internal {
         bidWaitingTime = _waitingMinutes * 1 minutes;
     }

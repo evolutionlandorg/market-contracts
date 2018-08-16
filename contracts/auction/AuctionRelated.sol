@@ -38,7 +38,6 @@ contract AuctionRelated is Pausable, ClockAuctionBase {
             uint128(_endingPriceInRING),
             uint64(_duration),
             uint64(now),
-            // TODO: initialize bid related member variables when creating auction
             // which refer to lastRecord, lastBidder, lastBidStartAt
             // all set to zero when initialized
             0,0x0,0
@@ -60,7 +59,7 @@ contract AuctionRelated is Pausable, ClockAuctionBase {
         require(_isOnAuction(auction));
         address seller = auction.seller;
         require(msg.sender == seller);
-        // TODO: once someone has bidden for this auction, no one has the right to cancel it.
+        // once someone has bidden for this auction, no one has the right to cancel it.
         require(auction.lastBidder == 0x0);
         _cancelAuction(_tokenId, seller);
     }
@@ -76,14 +75,13 @@ contract AuctionRelated is Pausable, ClockAuctionBase {
     {
         Auction storage auction = tokenIdToAuction[_tokenId];
         require(_isOnAuction(auction));
-        // TODO: once someone has bidden for this auction, no one has the right to cancel it.
+        // once someone has bidden for this auction, no one has the right to cancel it.
         require(auction.lastBidder == 0x0);
         _cancelAuction(_tokenId, auction.seller);
     }
 
     /// @dev Returns auction info for an NFT on auction.
     /// @param _tokenId - ID of NFT on auction.
-    // TODO: complete the auction member variables
     function getAuction(uint256 _tokenId)
     public
     view
@@ -174,7 +172,7 @@ contract AuctionRelated is Pausable, ClockAuctionBase {
         _createAuction(_from, _tokenId, startingPriceInRING, endingPriceInRING, duration, seller);
     }
 
-    // TODO: get auction's price of last bidder offered
+    // get auction's price of last bidder offered
     // @dev return price of _auction (in RING)
     function getLastRecord(uint _tokenId) public returns (uint256) {
         // Get a reference to the auction struct
