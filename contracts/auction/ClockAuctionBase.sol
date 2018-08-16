@@ -23,6 +23,15 @@ contract ClockAuctionBase {
         // Time when auction started
         // NOTE: 0 if this auction has been concluded
         uint64 startedAt;
+
+        // TODO: add attributes related to bid
+        // it saves gas in this order
+        // highest offered price (in RING)
+        uint128 lastRecord;
+        // bidder who offer the highest price
+        address lastBidder;
+        // latestBidder's bidTime in timestamp
+        uint lastBidStartAt;
     }
 
     // Reference to contract tracking NFT ownership
@@ -36,17 +45,27 @@ contract ClockAuctionBase {
     mapping(uint256 => Auction) tokenIdToAuction;
 
     //add address of RING
-    ERC20 RING;
+    ERC20 public RING;
 
     // address of tokenvendor which exchange eth to ring or ring to eth
     TokenVendor public tokenVendor;
+
+    //  TODO: add bidWaitingTime
+    // necessary period of time from invoking bid action to successfully taking the land asset.
+    // if someone else bid the same auction with higher price and within bidWaitingTime, your bid failed.
+    uint public bidWaitingTime;
+
+
 
     event AuctionCreated(uint256 tokenId, uint256 startingPriceInRING, uint256 endingPriceInRING, uint256 duration);
     event AuctionSuccessful(uint256 tokenId, uint256 totalPrice, address winner);
     event AuctionCancelled(uint256 tokenId);
 
     // claimedToken event
-    event ClaimedTokens(address indexed _token, address indexed _owner, uint _amount);
+    event ClaimedTokens(address indexed token, address indexed owner, uint amount);
+
+    //TODO: new bid event
+    event NewBid(uint256 indexed tokenId, address lastBidder, uint256 lastRecord, uint256 bidStartAt);
 
     /// @dev DON'T give me your money.
     function() external {}
@@ -149,16 +168,26 @@ contract ClockAuctionBase {
         // A bit of insurance against negative values (or wraparound).
         // Probably not necessary (since Ethereum guarnatees that the
         // now variable doesn't ever go backwards).
+        // TODO: modify currentPriceINRING logic
         if (now > _auction.startedAt) {
             secondsPassed = now - _auction.startedAt;
         }
+        // if no one has bidden for _auction, compute the price as below.
+        if (_auction.lastRecord == 0) {
+            return _computeCurrentPriceInRING(
+                _auction.startingPriceInRING,
+                _auction.endingPriceInRING,
+                _auction.duration,
+                secondsPassed
+            );
+        } else {
+            // compatible with first bid
+            // as long as price_offered_by_buyer >= 1.1 * currentPice,
+            // this buyer will be the lastBidder
+            return ( 11 * _auction.lastRecord / 10);
+        }
 
-        return _computeCurrentPriceInRING(
-            _auction.startingPriceInRING,
-            _auction.endingPriceInRING,
-            _auction.duration,
-            secondsPassed
-        );
+
     }
 
     /// @dev Computes the current price of an auction. Factored out
@@ -220,6 +249,12 @@ contract ClockAuctionBase {
 
     function _setRING(address _ring) internal {
         RING = ERC20(_ring);
+    }
+
+
+    //TODO: add _setBidWaitingTime
+    function _setBidWaitingTime(uint _waitingMinutes) internal {
+        bidWaitingTime = _waitingMinutes * 1 minutes;
     }
 
 
