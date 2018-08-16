@@ -10,7 +10,9 @@ contract ClockAuction is AuctionRelated {
     ///  the Nonfungible Interface.
     /// @param _cut - percent cut the owner takes on each auction, must be
     ///  between 0-10,000. It can be considered as transaction fee.
-    constructor(address _nftAddress, address _RING, address _tokenVendor, uint256 _cut) public {
+    /// @param _waitingMinutes - biggest waiting time from a bid's starting to ending(in minutes)
+    //TODO: add _waitingMinutes
+    constructor(address _nftAddress, address _RING, address _tokenVendor, uint256 _cut, uint256 _waitingMinutes) public {
         require(_cut <= 10000);
         ownerCut = _cut;
 
@@ -20,6 +22,7 @@ contract ClockAuction is AuctionRelated {
         nonFungibleContract = candidateContract;
         RING = ERC20(_RING);
         tokenVendor = TokenVendor(_tokenVendor);
+        _setBidWaitingTime(_waitingMinutes);
     }
 
     /// @notice This method can be used by the owner to extract mistakenly
@@ -48,14 +51,14 @@ contract ClockAuction is AuctionRelated {
     whenNotPaused
     {
         // _bid will throw if the bid or funds transfer fails
-        _bidWithETH(_tokenId, msg.value);
+        _bidWithETH(_tokenId, msg.value, msg.sender);
         _transfer(msg.sender, _tokenId);
     }
 
 
     /// @dev bid with eth(in wei). Computes the price and transfers winnings.
     /// Does NOT transfer ownership of token.
-    function _bidWithETH(uint256 _tokenId, uint256 _bidAmount)
+    function _bidWithETH(uint256 _tokenId, uint256 _bidAmount, address _buyer)
     internal
     returns (uint256)
     {
@@ -68,46 +71,74 @@ contract ClockAuction is AuctionRelated {
         // return an auction object that is all zeros.)
         require(_isOnAuction(auction));
 
+        require(now <= auction.lastBidStartAt + bidWaitingTime);
+
         // Check that the incoming bid is higher than the current
         // price
         uint256 priceInETH = _currentPriceETH(auction);
         // assure msg.value larger than current price in ring
-        require(_bidAmount >= priceInETH);
+        require(_bidAmount >= priceInETH,
+            "your offer is lower than the current price, try again with a higher one.");
 
+        // if no one has bidden for auction, priceInRING is computed through linear operation
+        // if someone has already bidden for it before, priceInRING is last bidder's offer
         uint priceInRING = _currentPriceInRING(auction);
+        require(priceInRING < 340282366920938463463374607431768211455);
+
+        // TODO: record last bidder's info
+        // last bidder's info
+        address lastBidder;
+        // last bidder's price
+        uint lastRecord;
+
+        if (lastBidder != 0x0) {
+            lastBidder = auction.lastBidder;
+            lastRecord = uint256(auction.lastRecord);
+        }
+
+        // TODO: modify bid-related member variables
+        // modify bid-related member variables
+        uint bidMoment = now;
+        auction.lastBidder = _buyer;
+        auction.lastRecord = uint128(priceInRING);
+        auction.lastBidStartAt = bidMoment;
 
         // Grab a reference to the seller before the auction struct
         // gets deleted.
         address seller = auction.seller;
 
-        // The bid is good! Remove the auction before sending the fees
-        // to the sender so we can't have a reentrancy attack.
-        _removeAuction(_tokenId);
 
-        // Transfer proceeds to seller (if there are any!)
-        if (priceInRING > 0) {
-            // assure that this get ring back from tokenVendor
-            require(tokenVendor.buyToken.value(_bidAmount)(address(this)));
+        // assure that this get ring back from tokenVendor
+        require(tokenVendor.buyToken.value(_bidAmount)(address(this)));
+
+        // the first bid
+        if (lastBidder == 0x0 && priceInRING > 0) {
             //  Calculate the auctioneer's cut.
             // (NOTE: _computeCut() is guaranteed to return a
             //  value <= price, so this subtraction can't go negative.)
-            uint256 auctioneerCutInRING = _computeCut(priceInRING);
-            //  eth that should be given back to the seller
-            uint256 sellerProceedsInRING = priceInRING - auctioneerCutInRING;
-
+            uint256 sellerProceedsInRING = priceInRING - _computeCut(priceInRING);
             // transfer to the seller
             RING.transfer(seller, sellerProceedsInRING);
         }
 
+        //  not the first bid
+        if (lastRecord > 0 && lastBidder != 0x0) {
+            uint extraForEach = (priceInRING - lastRecord) / 2;
+            uint realReturn = extraForEach - _computeCut(extraForEach);
+            RING.transfer(seller,realReturn);
+            RING.transfer(lastBidder,(realReturn + lastRecord));
+        }
+
         // Tell the world!
-        emit AuctionSuccessful(_tokenId, priceInRING, msg.sender);
+        emit NewBid(_tokenId, _buyer, priceInRING, bidMoment);
 
         return priceInRING;
     }
 
 
     // here to handle bid for LAND(NFT) using RING
-    // @dev bidder must use RING.transfer(address(this), _valueInRING, bytes32(_tokenId) to invoke this function
+    // @dev bidder must use RING.transfer(address(this), _valueInRING, bytes32(_tokenId)
+    // to invoke this function
     // @param _data - need to be generated from bytes32(tokenId)
     function tokenFallback(address _from, uint256 _valueInRING, bytes _data) public whenNotPaused {
         if (msg.sender == address(RING)) {
@@ -121,29 +152,89 @@ contract ClockAuction is AuctionRelated {
 
     }
 
+    // TODO: advice: offer some reward for the person who claimed
+    // @dev claim _tokenId for auction's lastBidder
+    function claimLandAsset(uint _tokenId) public {
+        // Get a reference to the auction struct
+        Auction storage auction = tokenIdToAuction[_tokenId];
 
+       require(_isOnAuction(auction));
+        // at least bidWaitingTime after last bidder's bid moment,
+        // and no one else has bidden during this bidWaitingTime,
+        // then any one can claim this token(land) for lastBidder.
+        require(now >= auction.lastBidStartAt + bidWaitingTime,
+        "this auction has not finished yet, try again later");
+        //prevent re-entry attack
+        _removeAuction(_tokenId);
 
+        nonFungibleContract.safeTransferFrom(this, auction.lastBidder, _tokenId);
+
+        emit AuctionSuccessful(_tokenId, auction.lastRecord, auction.lastBidder);
+    }
 
     // @dev bid with RING. Computes the price and transfers winnings.
     function _bidWithRING(address _from, uint256 _tokenId, uint256 _valueInRING) internal returns (uint256){
+        // Get a reference to the auction struct
         Auction storage auction = tokenIdToAuction[_tokenId];
         require(_isOnAuction(auction));
-        address seller = auction.seller;
-        // current price in RING
-        uint priceInRING = _currentPriceInRING(auction);
-        require (_valueInRING >= priceInRING);
-        _removeAuction(_tokenId);
 
-        if (priceInRING > 0) {
-            uint256 auctioneerCutInRING = _computeCut(priceInRING);
-            uint256 sellerProceedsInRING = priceInRING - auctioneerCutInRING;
-            RING.transfer(seller, sellerProceedsInRING);
-            emit AuctionSuccessful(_tokenId, priceInRING, _from);
+        require(now <= auction.lastBidStartAt + bidWaitingTime);
+
+        // Check that the incoming bid is higher than the current price
+        uint priceInRING = _currentPriceInRING(auction);
+        require (_valueInRING >= priceInRING,
+            "your offer is lower than the current price, try again with a higher one.");
+
+        // TODO: record last bidder's info
+        // last bidder's info
+        address lastBidder;
+        // last bidder's price
+        uint lastRecord;
+
+        if (lastBidder != 0x0) {
+            lastBidder = auction.lastBidder;
+            lastRecord = uint256(auction.lastRecord);
         }
+
+        // TODO: modify bid-related member variables
+        // modify bid-related member variables
+        uint bidMoment = now;
+        auction.lastBidder = _from;
+        auction.lastRecord = uint128(priceInRING);
+        auction.lastBidStartAt = bidMoment;
+
+        // Grab a reference to the seller before the auction struct
+        // gets deleted.
+        address seller = auction.seller;
+
+        if (lastBidder == 0x0 && priceInRING > 0) {
+            //  Calculate the auctioneer's cut.
+            // (NOTE: _computeCut() is guaranteed to return a
+            //  value <= price, so this subtraction can't go negative.)
+            uint256 sellerProceedsInRING = priceInRING - _computeCut(priceInRING);
+            // transfer to the seller
+            RING.transfer(seller, sellerProceedsInRING);
+        }
+
+        //  not the first bid
+        if (lastRecord > 0 && lastBidder != 0x0) {
+            uint extraForEach = (priceInRING - lastRecord) / 2;
+            uint realReturn = extraForEach - _computeCut(extraForEach);
+            RING.transfer(seller,realReturn);
+            RING.transfer(lastBidder,(realReturn + lastRecord));
+        }
+
+        // Tell the world!
+        emit NewBid(_tokenId, _from, priceInRING, bidMoment);
 
         return priceInRING;
     }
 
+
+    //@ param _waitingMinutes - waiting time (in minutes)
+    function setBidWaitingTime(uint _waitingMinutes) public onlyOwner {
+        _setBidWaitingTime(_waitingMinutes);
+    }
 
     function bytesToUint256(bytes b) public pure returns (uint256) {
         bytes32 out;

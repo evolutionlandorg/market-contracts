@@ -37,7 +37,11 @@ contract AuctionRelated is Pausable, ClockAuctionBase {
             uint128(_startingPriceInRING),
             uint128(_endingPriceInRING),
             uint64(_duration),
-            uint64(now)
+            uint64(now),
+            // TODO: initialize bid related member variables when creating auction
+            // which refer to lastRecord, lastBidder, lastBidStartAt
+            // all set to zero when initialized
+            0,0x0,0
         );
         _addAuction(_tokenId, auction);
     }
@@ -56,6 +60,8 @@ contract AuctionRelated is Pausable, ClockAuctionBase {
         require(_isOnAuction(auction));
         address seller = auction.seller;
         require(msg.sender == seller);
+        // TODO: once someone has bidden for this auction, no one has the right to cancel it.
+        require(auction.lastBidder == 0x0);
         _cancelAuction(_tokenId, seller);
     }
 
@@ -70,11 +76,14 @@ contract AuctionRelated is Pausable, ClockAuctionBase {
     {
         Auction storage auction = tokenIdToAuction[_tokenId];
         require(_isOnAuction(auction));
+        // TODO: once someone has bidden for this auction, no one has the right to cancel it.
+        require(auction.lastBidder == 0x0);
         _cancelAuction(_tokenId, auction.seller);
     }
 
     /// @dev Returns auction info for an NFT on auction.
     /// @param _tokenId - ID of NFT on auction.
+    // TODO: complete the auction member variables
     function getAuction(uint256 _tokenId)
     public
     view
@@ -84,7 +93,10 @@ contract AuctionRelated is Pausable, ClockAuctionBase {
         uint256 startingPrice,
         uint256 endingPrice,
         uint256 duration,
-        uint256 startedAt
+        uint256 startedAt,
+        uint128 lastRecord,
+        address lastBidder,
+        uint256 lastBidStartAt
     ) {
         Auction storage auction = tokenIdToAuction[_tokenId];
         require(_isOnAuction(auction));
@@ -93,7 +105,10 @@ contract AuctionRelated is Pausable, ClockAuctionBase {
         auction.startingPriceInRING,
         auction.endingPriceInRING,
         auction.duration,
-        auction.startedAt
+        auction.startedAt,
+        auction.lastRecord,
+        auction.lastBidder,
+        auction.lastBidStartAt
         );
     }
 
@@ -157,5 +172,12 @@ contract AuctionRelated is Pausable, ClockAuctionBase {
 
         _createAuction(_from, _tokenId, startingPriceInRING, endingPriceInRING, duration, seller);
     }
+
+    function getRealPrice(uint _tokenId) public returns (uint256) {
+        // Get a reference to the auction struct
+        Auction storage auction = tokenIdToAuction[_tokenId];
+        return _getRealPrice(auction);
+    }
+
 
 }
