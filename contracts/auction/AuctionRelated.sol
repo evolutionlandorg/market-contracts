@@ -195,8 +195,4 @@ contract AuctionRelated is Pausable, ClockAuctionBase {
     }
 
 
-
-
-
-
 }

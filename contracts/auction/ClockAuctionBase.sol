@@ -257,7 +257,6 @@ contract ClockAuctionBase {
         bidWaitingTime = _waitingMinutes * 1 minutes;
     }
 
-
     //  getexchangerate from tokenVendor
     function getExchangeRate() public view returns (uint256){
         return tokenVendor.buyTokenRate();
