@@ -1,4 +1,7 @@
 # market-contracts
+this project implements the whole Dutch Auction.
+
+此项目实现了完整的荷兰式拍卖
 
 ## 拍卖合约
 `ClockAuction.sol`
@@ -10,6 +13,7 @@
 3. address _tokenVendor: ETH和RING相互转换的TokenVendor合约地址
 4. uint256 _cut: 交易手续费，即拍卖完成后不返还给卖家的部分。范围[0, 10000]，对应着[0%, 100%]
 5. uint245 _waitingMinutes: 每次竞拍等待的最长时间，填入分钟数
+6. uint256 _claimBounty: 给触发claimLandAsset的奖励
 
 
 ## 拍卖操作相关
