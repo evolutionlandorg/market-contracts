@@ -141,6 +141,7 @@ contract ClockAuction is AuctionRelated {
     // @dev bidder must use RING.transfer(address(this), _valueInRING, bytes32(_tokenId)
     // to invoke this function
     // @param _data - need to be generated from bytes32(tokenId)
+
     function tokenFallback(address _from, uint256 _valueInToken, bytes _data) public whenNotPaused {
         uint256 tokenId = bytesToUint256(_data);
         if (msg.sender == address(RING)) {
@@ -160,7 +161,6 @@ contract ClockAuction is AuctionRelated {
 
             _buyWithKTON(_from, tokenId, _valueInToken);
         }
-
     }
 
     // TODO: advice: offer some reward for the person who claimed
