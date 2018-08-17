@@ -11,7 +11,14 @@ contract ClockAuction is AuctionRelated {
     /// @param _cut - percent cut the owner takes on each auction, must be
     ///  between 0-10,000. It can be considered as transaction fee.
     /// @param _waitingMinutes - biggest waiting time from a bid's starting to ending(in minutes)
-    constructor(address _nftAddress, address _RING, address _tokenVendor, uint256 _cut, uint256 _waitingMinutes) public {
+    constructor(
+        address _nftAddress,
+        address _RING,
+        address _tokenVendor,
+        uint256 _cut,
+        uint256 _waitingMinutes,
+        uint _claimBounty)
+    public {
         require(_cut <= 10000);
         ownerCut = _cut;
 
@@ -22,6 +29,7 @@ contract ClockAuction is AuctionRelated {
         _setRING(_RING);
         _setTokenVendor(_tokenVendor);
         _setBidWaitingTime(_waitingMinutes);
+        _setClaimBounty(_claimBounty);
     }
 
     /// @notice This method can be used by the owner to extract mistakenly
@@ -85,7 +93,7 @@ contract ClockAuction is AuctionRelated {
         // if someone has already bidden for it before, priceInRING is last bidder's offer
         uint priceInRING = _currentPriceInRING(auction);
 
-        uint bidMoment = _buyProcess(_buyer, auction, priceInRING);
+        uint bidMoment = _buyProcess(_buyer, auction, priceInRING.sub(claimBounty));
 
         // Tell the world!
         emit NewBid(_tokenId, _buyer, priceInRING, bidMoment);
@@ -126,6 +134,10 @@ contract ClockAuction is AuctionRelated {
         _removeAuction(_tokenId);
 
         _transfer(auction.lastBidder, _tokenId);
+        // if there is claimBounty, then reward who invoke this function
+        if (claimBounty > 0) {
+            require(RING.transfer(msg.sender, claimBounty));
+        }
 
         emit AuctionSuccessful(_tokenId, auction.lastRecord, auction.lastBidder);
     }
@@ -143,7 +155,7 @@ contract ClockAuction is AuctionRelated {
         require(_valueInRING >= priceInRING,
             "your offer is lower than the current price, try again with a higher one.");
 
-        uint bidMoment = _buyProcess(_from, auction, priceInRING);
+        uint bidMoment = _buyProcess(_from, auction, priceInRING.sub(claimBounty));
 
         // Tell the world!
         emit NewBid(_tokenId, _from, priceInRING, bidMoment);
@@ -205,6 +217,10 @@ contract ClockAuction is AuctionRelated {
     //@ param _waitingMinutes - waiting time (in minutes)
     function setBidWaitingTime(uint _waitingMinutes) public onlyOwner {
         _setBidWaitingTime(_waitingMinutes);
+    }
+
+    function setClaimBounty(uint _claimBounty) public onlyOwner {
+        _setClaimBounty(_claimBounty);
     }
 
     function bytesToUint256(bytes b) public pure returns (uint256) {

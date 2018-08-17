@@ -53,6 +53,9 @@ contract ClockAuctionBase {
     // if someone else bid the same auction with higher price and within bidWaitingTime, your bid failed.
     uint public bidWaitingTime;
 
+    // if someone successfully invokes claimLandAsset,
+    // then he/she can get claimBounty as reward
+    uint public claimBounty;
 
 
     event AuctionCreated(uint256 tokenId, uint256 startingPriceInRING, uint256 endingPriceInRING, uint256 duration);
@@ -64,6 +67,9 @@ contract ClockAuctionBase {
 
     // new bid event
     event NewBid(uint256 indexed tokenId, address lastBidder, uint256 lastRecord, uint256 bidStartAt);
+
+    // set claimBounty
+    event ClaimBounty(uint256 indexed _claimBounty);
 
     /// @dev DON'T give me your money.
     function() external {}
@@ -181,11 +187,12 @@ contract ClockAuctionBase {
             // compatible with first bid
             // as long as price_offered_by_buyer >= 1.1 * currentPice,
             // this buyer will be the lastBidder
-            return ( 11 * _auction.lastRecord / 10);
+            //TODO: 1.1 * (lastRecord - claimBounty) + claimBounty
+            return ( (11 * (uint256(_auction.lastRecord).sub(claimBounty)) / 10).add(claimBounty));
         }
 
-
     }
+
 
     /// @dev Computes the current price of an auction. Factored out
     ///  from _currentPrice so we can run extensive unit tests.
@@ -198,7 +205,7 @@ contract ClockAuctionBase {
         uint256 _secondsPassed
     )
     internal
-    pure
+    view
     returns (uint256)
     {
         // NOTE: We don't use SafeMath (or similar) in this function because
@@ -224,7 +231,8 @@ contract ClockAuctionBase {
             // less that _startingPrice. Thus, this result will always end up positive.
             int256 currentPriceInRING = int256(_startingPriceInRING) + currentPriceInRINGChange;
 
-            return uint256(currentPriceInRING);
+            //TODO: add claimBounty
+            return (uint256(currentPriceInRING) + claimBounty);
         }
     }
 
@@ -253,10 +261,17 @@ contract ClockAuctionBase {
         bidWaitingTime = _waitingMinutes * 1 minutes;
     }
 
-    //  getexchangerate from tokenVendor
-    function getExchangeRate() public view returns (uint256){
+    //TODO: set claimBounty
+    function _setClaimBounty(uint _claimBounty) internal {
+        claimBounty = _claimBounty;
+        emit ClaimBounty(_claimBounty);
+    }
+
+    // getexchangerate from tokenVendor
+    function getExchangeRate() public view returns (uint256) {
         return tokenVendor.buyTokenRate();
     }
+
 
 
 

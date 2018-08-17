@@ -192,5 +192,13 @@ contract AuctionRelated is Pausable, ClockAuctionBase {
         return auction.lastBidStartAt;
     }
 
+    // @dev if someone new wants to bid, the lowest price he/she need to afford
+    function getNextBidRecord(uint _tokenId) public returns (uint256) {
+        Auction storage auction = tokenIdToAuction[_tokenId];
+        return _currentPriceInRING(auction);
+    }
+
+
+
 
 }
