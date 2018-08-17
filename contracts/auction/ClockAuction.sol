@@ -17,9 +17,8 @@ contract ClockAuction is AuctionRelated {
         address _tokenVendor,
         uint256 _cut,
         uint256 _waitingMinutes,
-        uint _claimBounty,
-        address _landData,
-        address _kton
+        uint256 _claimBountyForRING,
+        address _pangu
         )
     public {
         require(_cut <= 10000);
@@ -32,9 +31,8 @@ contract ClockAuction is AuctionRelated {
         _setRING(_RING);
         _setTokenVendor(_tokenVendor);
         _setBidWaitingTime(_waitingMinutes);
-        _setClaimBounty(_claimBounty);
-        _setLandData(_landData);
-        _setKTON(_kton);
+        _setClaimBounty(_RING, _claimBountyForRING);
+        _setPangu(_pangu);
     }
 
     /// @notice This method can be used by the owner to extract mistakenly
@@ -53,30 +51,6 @@ contract ClockAuction is AuctionRelated {
         emit ClaimedTokens(_token, owner, balance);
     }
 
-
-    // TODO: in genesis auction, if tokenId is reserverd,
-    // you need to buy it with kr.
-    function _buyWithKTON(address _from, uint256 _tokenId, uint256 _valueInKTON) internal returns (uint256){
-        // Get a reference to the auction struct
-        Auction storage auction = tokenIdToAuction[_tokenId];
-        // require this is the first bid of auction
-        require(auction.lastBidder == 0x0, "It's not the first bid, KTON is not allowed");
-
-        require(_isOnAuction(auction));
-        // computingg priceInKTON is the same as computing priceInRING
-        // but there is no bounty for claiming
-        uint priceInKTON = _currentPriceInRING(auction,0);
-
-        require(_valueInKTON >= priceInKTON,
-            "your offer is lower than the current price, try again with a higher one.");
-
-        uint bidMoment = _buyProcess(_from, auction, priceInKTON, address(KTON));
-
-        // Tell the world!
-        emit NewBid(_tokenId, _from, priceInKTON, 3, bidMoment);
-
-        return priceInKTON;
-    }
 
 
     /// @dev Bids on an open auction, completing the auction and transferring
@@ -101,11 +75,8 @@ contract ClockAuction is AuctionRelated {
     {
         // Get a reference to the auction struct
         Auction storage auction = tokenIdToAuction[_tokenId];
-
-        // TODO: if it is genesis auction ,require that tokenId is not reserved
-        if (auction.lastBidder == 0x0) {
-            require(!landData.isReserved(_tokenId));
-        }
+        // can only bid the auction that allows ring
+        require(auction.token == address(RING));
 
         // Explicitly check that this auction is currently live.
         // (Because of how Ethereum mappings work, we can't just count
@@ -123,16 +94,42 @@ contract ClockAuction is AuctionRelated {
         // assure that this get ring back from tokenVendor
         require(tokenVendor.buyToken.value(_bidAmount)(address(this)));
 
+
         // if no one has bidden for auction, priceInRING is computed through linear operation
         // if someone has already bidden for it before, priceInRING is last bidder's offer
-        uint priceInRING = _currentPriceInRING(auction, claimBounty);
+        uint priceInRING = _currentPriceInToken(auction);
 
-        uint bidMoment = _buyProcess(_buyer, auction, priceInRING.sub(claimBounty), address(RING));
+        uint bidMoment = _buyProcess(_buyer, auction, priceInRING);
 
         // Tell the world!
-        emit NewBid(_tokenId, _buyer, priceInRING, 1, bidMoment);
+        // 0x0 refers to ETH
+        emit NewBid(_tokenId, _buyer, priceInRING, 0x0, bidMoment);
 
         return priceInRING;
+    }
+
+
+
+    // @dev bid with RING. Computes the price and transfers winnings.
+    function _bidWithToken(address _from, uint256 _tokenId, uint256 _valueInToken) internal returns (uint256){
+        // Get a reference to the auction struct
+        Auction storage auction = tokenIdToAuction[_tokenId];
+        // require that it is genesis auction
+        require(auction.seller == pangu && msg.sender == pangu);
+
+        require(_isOnAuction(auction));
+
+        // Check that the incoming bid is higher than the current price
+        uint priceInToken = _currentPriceInToken(auction);
+        require(_valueInToken >= priceInToken,
+            "your offer is lower than the current price, try again with a higher one.");
+
+        uint bidMoment = _buyProcess(_from, auction, priceInToken);
+
+        // Tell the world!
+        emit NewBid(_tokenId, _from, priceInToken, auction.token, bidMoment);
+
+        return priceInToken;
     }
 
 
@@ -144,22 +141,13 @@ contract ClockAuction is AuctionRelated {
 
     function tokenFallback(address _from, uint256 _valueInToken, bytes _data) public whenNotPaused {
         uint256 tokenId = bytesToUint256(_data);
-        if (msg.sender == address(RING)) {
-            // assure it can be converted into uint256 correctly
-            require(_data.length == 32);
-            // TODO: add restriction
-            require(!landData.isReserved(tokenId));
-            _bidWithRING(_from, tokenId, _valueInToken);
-        }
-
-        if (msg.sender == address(KTON)) {
-            // assure it can be converted into uint256 correctly
-            require(_data.length == 32);
-            // TODO: add restriction
-            // require tokenId is reserved
-            require(landData.isReserved(tokenId));
-
-            _buyWithKTON(_from, tokenId, _valueInToken);
+        Auction storage auction = tokenIdToAuction[tokenId];
+        if(_isOnAuction(auction)) {
+            if (msg.sender == auction.token) {
+                // assure it is uint256 for security
+                require(_data.length == 32);
+                _bidWithToken(_from, tokenId, _valueInToken);
+            }
         }
     }
 
@@ -175,62 +163,39 @@ contract ClockAuction is AuctionRelated {
         // then any one can claim this token(land) for lastBidder.
         require(now >= auction.lastBidStartAt + bidWaitingTime,
             "this auction has not finished yet, try again later");
+        ERC20 token = ERC20(auction.token);
+
+        uint claimBounty = token2claimBounty[auction.token];
         //prevent re-entry attack
         _removeAuction(_tokenId);
 
         _transfer(auction.lastBidder, _tokenId);
         // if there is claimBounty, then reward who invoke this function
         if (claimBounty > 0) {
-            require(RING.transfer(msg.sender, claimBounty));
+            require(token.transfer(msg.sender, claimBounty));
         }
 
         emit AuctionSuccessful(_tokenId, auction.lastRecord, auction.lastBidder);
     }
 
-    // @dev bid with RING. Computes the price and transfers winnings.
-    function _bidWithRING(address _from, uint256 _tokenId, uint256 _valueInRING) internal returns (uint256){
-        // Get a reference to the auction struct
-        Auction storage auction = tokenIdToAuction[_tokenId];
-
-        // TODO: if it is genesis auction ,require that tokenId is not reserved
-        if (auction.lastBidder == 0x0) {
-            require(!landData.isReserved(_tokenId));
-        }
-
-        require(_isOnAuction(auction));
-
-        // Check that the incoming bid is higher than the current price
-        uint priceInRING = _currentPriceInRING(auction, claimBounty);
-        require(_valueInRING >= priceInRING,
-            "your offer is lower than the current price, try again with a higher one.");
-
-        uint bidMoment = _buyProcess(_from, auction, priceInRING.sub(claimBounty),address(RING));
-
-        // Tell the world!
-        emit NewBid(_tokenId, _from, priceInRING, 2, bidMoment);
-
-        return priceInRING;
-    }
 
     // TODO: add _token to compatible backwards with ring and eth
-    function _buyProcess(address _buyer, Auction storage _auction, uint _priceInToken, address _token)
+    function _buyProcess(address _buyer, Auction storage _auction, uint _priceInToken)
     internal
     canBeStoredWith128Bits(_priceInToken)
     returns (uint256){
+
+        ERC20 token = ERC20(_auction.token);
+        uint claimBounty = token2claimBounty[_auction.token];
+
+        uint priceWithoutBounty = _priceInToken.sub(claimBounty);
 
         // last bidder's info
         address lastBidder;
         // last bidder's price
         uint lastRecord;
-
-
-    if (_auction.lastBidder != 0x0) {
-            // TODO: repair bug of first bid's time limitation
-            // if this the first bid, there is no time limitation
-            require(now <= _auction.lastBidStartAt + bidWaitingTime);
-            lastBidder = _auction.lastBidder;
-            lastRecord = uint256(_auction.lastRecord);
-        }
+        lastBidder = _auction.lastBidder;
+        lastRecord = uint256(_auction.lastRecord);
 
         // modify bid-related member variables
         uint bidMoment = now;
@@ -247,21 +212,29 @@ contract ClockAuction is AuctionRelated {
             //  Calculate the auctioneer's cut.
             // (NOTE: _computeCut() is guaranteed to return a
             //  value <= price, so this subtraction can't go negative.)
-            uint256 sellerProceedsInRING = _priceInToken - _computeCut(_priceInToken);
+            // TODO: token to the seller
+            // we dont touch claimBounty
+            uint256 sellerProceedsInToken = priceWithoutBounty - _computeCut(priceWithoutBounty);
             // transfer to the seller
-            RING.transfer(seller, sellerProceedsInRING);
+            token.transfer(seller, sellerProceedsInToken);
         }
 
         // TODO: the math calculation needs further check
         //  not the first bid
         if (lastRecord > 0 && lastBidder != 0x0) {
-            // _priceInRING that is larger than lastRecord
+            // TODO: repair bug of first bid's time limitation
+            // if this the first bid, there is no time limitation
+            require(now <= _auction.lastBidStartAt + bidWaitingTime, "It's too late.");
+
+            // _priceInToken that is larger than lastRecord
             // was assured in _currentPriceInRING(_auction)
             // here double check
+            // 1.1*price + bounty - (price + bounty) = 0.1price
+            // we dont touch claimBounty
             uint extraForEach = (_priceInToken.sub(lastRecord)) / 2;
             uint realReturn = extraForEach.sub(_computeCut(extraForEach));
-            ERC20(_token).transfer(seller, realReturn);
-            ERC20(_token).transfer(lastBidder, (realReturn + lastRecord));
+            token.transfer(seller, realReturn);
+            token.transfer(lastBidder, (realReturn + lastRecord));
         }
 
         return bidMoment;
@@ -273,16 +246,12 @@ contract ClockAuction is AuctionRelated {
         _setBidWaitingTime(_waitingMinutes);
     }
 
-    function setClaimBounty(uint _claimBounty) public onlyOwner {
-        _setClaimBounty(_claimBounty);
+    function setClaimBounty(address _token, uint _claimBounty) public onlyOwner {
+        _setClaimBounty(_token, _claimBounty);
     }
 
-    function setLandData(address _landData) public onlyOwner {
-        _setLandData(_landData);
-    }
-
-    function setKTON(address _kton) public onlyOwner {
-        _setKTON(_kton);
+    function setPangu(address _pangu) public onlyOwner {
+        _setPangu(_pangu);
     }
 
     function bytesToUint256(bytes b) public pure returns (uint256) {

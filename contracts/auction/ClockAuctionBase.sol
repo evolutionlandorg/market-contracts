@@ -4,7 +4,6 @@ import "openzeppelin-solidity/contracts/token/ERC721/ERC721Basic.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "./ITokenVendor.sol";
-import "./ILandData.sol";
 
 
 /// @title Auction Core
@@ -15,15 +14,18 @@ contract ClockAuctionBase {
     struct Auction {
         // Current owner of NFT
         address seller;
-        // Price (in RING) at beginning of auction
-        uint128 startingPriceInRING;
-        // Price (in RING) at end of auction
-        uint128 endingPriceInRING;
+        // Price (in token) at beginning of auction
+        uint128 startingPriceInToken;
+        // Price (in token) at end of auction
+        uint128 endingPriceInToken;
         // Duration (in seconds) of auction
         uint64 duration;
         // Time when auction started
         // NOTE: 0 if this auction has been concluded
         uint64 startedAt;
+        //TODO: add token address
+        // bid the auction through which token
+        address token;
 
         // it saves gas in this order
         // highest offered price (in RING)
@@ -32,6 +34,7 @@ contract ClockAuctionBase {
         address lastBidder;
         // latestBidder's bidTime in timestamp
         uint256 lastBidStartAt;
+
     }
 
     // Reference to contract tracking NFT ownership
@@ -50,11 +53,9 @@ contract ClockAuctionBase {
     // address of tokenvendor which exchange eth to ring or ring to eth
     ITokenVendor public tokenVendor;
 
-    //TODO: address of LandData
-    ILandData public landData;
-
-    //TODO: address of KTON
-    ERC20 public KTON;
+    //TODO: add genesis landlorder
+    // genesis landlorder, pangu is the creator of all in certain version of Chinese mythology.
+    address public pangu;
 
     // necessary period of time from invoking bid action to successfully taking the land asset.
     // if someone else bid the same auction with higher price and within bidWaitingTime, your bid failed.
@@ -62,10 +63,12 @@ contract ClockAuctionBase {
 
     // if someone successfully invokes claimLandAsset,
     // then he/she can get claimBounty as reward
-    uint public claimBounty;
+    //token address => claimBounty of certain token
+    //TODO: modify the type of claimBounty
+    mapping (address => uint) public token2claimBounty;
 
 
-    event AuctionCreated(uint256 tokenId, uint256 startingPriceInRING, uint256 endingPriceInRING, uint256 duration);
+    event AuctionCreated(uint256 tokenId, uint256 startingPriceInToken, uint256 endingPriceInToken, uint256 duration, address token);
     event AuctionSuccessful(uint256 tokenId, uint256 totalPrice, address winner);
     event AuctionCancelled(uint256 tokenId);
 
@@ -73,14 +76,11 @@ contract ClockAuctionBase {
     event ClaimedTokens(address indexed token, address indexed owner, uint amount);
 
     // new bid event
-    // @param tokenFlag
-    // 1 : eth (in wei)
-    // 2 : ring (in wei)
-    // 3 : kr (in wei)
-    event NewBid(uint256 indexed tokenId, address lastBidder, uint256 lastRecord, uint256 tokenFlag, uint256 bidStartAt);
+
+    event NewBid(uint256 indexed tokenId, address lastBidder, uint256 lastRecord, address tokenAddress, uint256 bidStartAt);
 
     // set claimBounty
-    event ClaimBounty(uint256 indexed _claimBounty);
+    event ClaimBounty(address indexed _token, uint256 indexed _claimBounty);
 
     /// @dev DON'T give me your money.
     function() external {}
@@ -135,9 +135,10 @@ contract ClockAuctionBase {
 
         emit AuctionCreated(
             uint256(_tokenId),
-            uint256(_auction.startingPriceInRING),
-            uint256(_auction.endingPriceInRING),
-            uint256(_auction.duration)
+            uint256(_auction.startingPriceInToken),
+            uint256(_auction.endingPriceInToken),
+            uint256(_auction.duration),
+            _auction.token
         );
     }
 
@@ -166,19 +167,21 @@ contract ClockAuctionBase {
     internal
     view
     returns (uint256) {
-        return (_currentPriceInRING(_auction, claimBounty) / getExchangeRate());
+        return (_currentPriceInToken(_auction) / getExchangeRate());
     }
 
     /// @dev Returns current price of an NFT on auction. Broken into two
     ///  functions (this one, that computes the duration from the auction
     ///  structure, and the other that does the price computation) so we
     ///  can easily test that the price computation works correctly.
-    function _currentPriceInRING(Auction storage _auction, uint256 _claimBounty)
+    function _currentPriceInToken(Auction storage _auction)
     internal
     view
     returns (uint256)
     {
         uint256 secondsPassed = 0;
+        // get bounty of certain token
+        uint256 claimBounty = token2claimBounty[_auction.token];
 
         // A bit of insurance against negative values (or wraparound).
         // Probably not necessary (since Ethereum guarnatees that the
@@ -188,19 +191,19 @@ contract ClockAuctionBase {
         }
         // if no one has bidden for _auction, compute the price as below.
         if (_auction.lastRecord == 0) {
-            return _computeCurrentPriceInRING(
-                _auction.startingPriceInRING,
-                _auction.endingPriceInRING,
+            return _computeCurrentPriceInToken(
+                _auction.startingPriceInToken,
+                _auction.endingPriceInToken,
                 _auction.duration,
                 secondsPassed,
-                _claimBounty
+                claimBounty
             );
         } else {
             // compatible with first bid
             // as long as price_offered_by_buyer >= 1.1 * currentPice,
             // this buyer will be the lastBidder
             // 1.1 * (lastRecord - claimBounty) + claimBounty
-            return ( (11 * (uint256(_auction.lastRecord).sub(_claimBounty)) / 10).add(_claimBounty));
+            return ( (11 * (uint256(_auction.lastRecord).sub(claimBounty)) / 10).add(claimBounty));
         }
 
     }
@@ -210,9 +213,9 @@ contract ClockAuctionBase {
     ///  from _currentPrice so we can run extensive unit tests.
     ///  When testing, make this function public and turn on
     ///  `Current price computation` test suite.
-    function _computeCurrentPriceInRING(
-        uint256 _startingPriceInRING,
-        uint256 _endingPriceInRING,
+    function _computeCurrentPriceInToken(
+        uint256 _startingPriceInToken,
+        uint256 _endingPriceInToken,
         uint256 _duration,
         uint256 _secondsPassed,
         uint256 _claimBounty
@@ -229,22 +232,22 @@ contract ClockAuctionBase {
         if (_secondsPassed >= _duration) {
             // We've reached the end of the dynamic pricing portion
             // of the auction, just return the end price.
-            return _endingPriceInRING;
+            return _endingPriceInToken;
         } else {
             // Starting price can be higher than ending price (and often is!), so
             // this delta can be negative.
-            int256 totalPriceInRINGChange = int256(_endingPriceInRING) - int256(_startingPriceInRING);
+            int256 totalPriceInTokenChange = int256(_endingPriceInToken) - int256(_startingPriceInToken);
 
             // This multiplication can't overflow, _secondsPassed will easily fit within
             // 64-bits, and totalPriceChange will easily fit within 128-bits, their product
             // will always fit within 256-bits.
-            int256 currentPriceInRINGChange = totalPriceInRINGChange * int256(_secondsPassed) / int256(_duration);
+            int256 currentPriceInTokenChange = totalPriceInTokenChange * int256(_secondsPassed) / int256(_duration);
 
             // currentPriceChange can be negative, but if so, will have a magnitude
             // less that _startingPrice. Thus, this result will always end up positive.
-            int256 currentPriceInRING = int256(_startingPriceInRING) + currentPriceInRINGChange;
+            int256 currentPriceInToken = int256(_startingPriceInToken) + currentPriceInTokenChange;
 
-            return (uint256(currentPriceInRING) + _claimBounty);
+            return (uint256(currentPriceInToken) + _claimBounty);
         }
     }
 
@@ -273,17 +276,14 @@ contract ClockAuctionBase {
         bidWaitingTime = _waitingMinutes * 1 minutes;
     }
 
-    function _setClaimBounty(uint _claimBounty) internal {
-        claimBounty = _claimBounty;
-        emit ClaimBounty(_claimBounty);
+    //TODO:
+    function _setClaimBounty(address _token, uint _claimBounty) internal {
+        token2claimBounty[_token] = _claimBounty;
+        emit ClaimBounty(_token, _claimBounty);
     }
 
-    function _setLandData(address _landData) internal {
-        landData = ILandData(_landData);
-    }
-
-    function _setKTON(address _kton) internal {
-        KTON = ERC20(_kton);
+    function _setPangu(address _pangu) internal {
+        pangu = _pangu;
     }
 
     // getexchangerate from tokenVendor

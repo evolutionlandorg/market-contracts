@@ -10,23 +10,24 @@ contract AuctionRelated is Pausable, ClockAuctionBase {
     /// @dev Creates and begins a new auction.
     /// @param _tokenId - ID of token to auction, sender must be owner.
     //  NOTE: change _startingPrice and _endingPrice in from wei to ring for user-friendly reason
-    /// @param _startingPriceInRING - Price of item (in ring) at beginning of auction.
-    /// @param _endingPriceInRING - Price of item (in ring) at end of auction.
+    /// @param _startingPriceInToken - Price of item (in token) at beginning of auction.
+    /// @param _endingPriceInToken - Price of item (in token) at end of auction.
     /// @param _duration - Length of time to move between starting
     ///  price and ending price (in seconds).
     /// @param _seller - Seller, if not the message sender
     function _createAuction(
         address _from,
         uint256 _tokenId,
-        uint256 _startingPriceInRING,
-        uint256 _endingPriceInRING,
+        uint256 _startingPriceInToken,
+        uint256 _endingPriceInToken,
         uint256 _duration,
-        address _seller
+        address _seller,
+        address _token
     )
     internal
     whenNotPaused
-    canBeStoredWith128Bits(_startingPriceInRING)
-    canBeStoredWith128Bits(_endingPriceInRING)
+    canBeStoredWith128Bits(_startingPriceInToken)
+    canBeStoredWith128Bits(_endingPriceInToken)
     canBeStoredWith64Bits(_duration)
     {
         require(_owns(_from, _tokenId), "you are not the owner, dont do this.");
@@ -34,10 +35,12 @@ contract AuctionRelated is Pausable, ClockAuctionBase {
 
         Auction memory auction = Auction(
             _seller,
-            uint128(_startingPriceInRING),
-            uint128(_endingPriceInRING),
+            uint128(_startingPriceInToken),
+            uint128(_endingPriceInToken),
             uint64(_duration),
             uint64(now),
+            //TODO: add auction.token
+            _token,
             // which refer to lastRecord, lastBidder, lastBidStartAt
             // all set to zero when initialized
             0,0x0,0
@@ -92,6 +95,7 @@ contract AuctionRelated is Pausable, ClockAuctionBase {
         uint256 endingPrice,
         uint256 duration,
         uint256 startedAt,
+        address token,
         uint128 lastRecord,
         address lastBidder,
         uint256 lastBidStartAt
@@ -100,10 +104,11 @@ contract AuctionRelated is Pausable, ClockAuctionBase {
         require(_isOnAuction(auction));
         return (
         auction.seller,
-        auction.startingPriceInRING,
-        auction.endingPriceInRING,
+        auction.startingPriceInToken,
+        auction.endingPriceInToken,
         auction.duration,
         auction.startedAt,
+        auction.token,
         auction.lastRecord,
         auction.lastBidder,
         auction.lastBidStartAt
@@ -113,14 +118,14 @@ contract AuctionRelated is Pausable, ClockAuctionBase {
     /// @dev Returns the current price of an auction.
     /// 
     /// @param _tokenId - ID of the token price we are checking.
-    function getCurrentPriceInRING(uint256 _tokenId)
+    function getCurrentPriceInToken(uint256 _tokenId)
     public
     view
     returns (uint256)
     {
         Auction storage auction = tokenIdToAuction[_tokenId];
         require(_isOnAuction(auction));
-        return _currentPriceInRING(auction, claimBounty);
+        return _currentPriceInToken(auction);
     }
 
     // to apply for the safeTransferFrom
@@ -167,10 +172,24 @@ contract AuctionRelated is Pausable, ClockAuctionBase {
                 duration := mload(add(ptr,196))
                 seller := mload(add(ptr,228))
             }
-
-            _createAuction(_from, _tokenId, startingPriceInRING, endingPriceInRING, duration, seller);
+            //TODO: add parameter _token
+            _createAuction(_from, _tokenId, startingPriceInRING, endingPriceInRING, duration, seller,address(RING));
         }
 
+    }
+
+    //TODO: add createAuction for pangu
+    function createAuction(
+        uint256 _tokenId,
+        uint256 _startingPriceInToken,
+        uint256 _endingPriceInToken,
+        uint256 _duration,
+        address _seller,
+        address _token)
+    public {
+        require(msg.sender == pangu, "only pangu can call this");
+        // pangu can only set its own as seller
+        _createAuction(msg.sender, _tokenId, _startingPriceInToken, _endingPriceInToken, _duration, msg.sender, _token);
     }
 
     // get auction's price of last bidder offered
@@ -194,9 +213,9 @@ contract AuctionRelated is Pausable, ClockAuctionBase {
     }
 
     // @dev if someone new wants to bid, the lowest price he/she need to afford
-    function getNextBidRecord(uint _tokenId) public returns (uint256) {
+    function computeNextBidRecord(uint _tokenId) public returns (uint256) {
         Auction storage auction = tokenIdToAuction[_tokenId];
-        return _currentPriceInRING(auction, claimBounty);
+        return _currentPriceInToken(auction);
     }
 
 
