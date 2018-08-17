@@ -4,6 +4,7 @@ import "openzeppelin-solidity/contracts/token/ERC721/ERC721Basic.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "./ITokenVendor.sol";
+import "./ILandData.sol";
 
 
 /// @title Auction Core
@@ -30,7 +31,7 @@ contract ClockAuctionBase {
         // bidder who offer the highest price
         address lastBidder;
         // latestBidder's bidTime in timestamp
-        uint lastBidStartAt;
+        uint256 lastBidStartAt;
     }
 
     // Reference to contract tracking NFT ownership
@@ -49,6 +50,12 @@ contract ClockAuctionBase {
     // address of tokenvendor which exchange eth to ring or ring to eth
     ITokenVendor public tokenVendor;
 
+    //TODO: address of LandData
+    ILandData public landData;
+
+    //TODO: address of KTON
+    ERC20 public KTON;
+
     // necessary period of time from invoking bid action to successfully taking the land asset.
     // if someone else bid the same auction with higher price and within bidWaitingTime, your bid failed.
     uint public bidWaitingTime;
@@ -66,7 +73,11 @@ contract ClockAuctionBase {
     event ClaimedTokens(address indexed token, address indexed owner, uint amount);
 
     // new bid event
-    event NewBid(uint256 indexed tokenId, address lastBidder, uint256 lastRecord, uint256 bidStartAt);
+    // @param tokenFlag
+    // 1 : eth (in wei)
+    // 2 : ring (in wei)
+    // 3 : kr (in wei)
+    event NewBid(uint256 indexed tokenId, address lastBidder, uint256 lastRecord, uint256 tokenFlag, uint256 bidStartAt);
 
     // set claimBounty
     event ClaimBounty(uint256 indexed _claimBounty);
@@ -155,14 +166,14 @@ contract ClockAuctionBase {
     internal
     view
     returns (uint256) {
-        return (_currentPriceInRING(_auction) / getExchangeRate());
+        return (_currentPriceInRING(_auction, claimBounty) / getExchangeRate());
     }
 
     /// @dev Returns current price of an NFT on auction. Broken into two
     ///  functions (this one, that computes the duration from the auction
     ///  structure, and the other that does the price computation) so we
     ///  can easily test that the price computation works correctly.
-    function _currentPriceInRING(Auction storage _auction)
+    function _currentPriceInRING(Auction storage _auction, uint256 _claimBounty)
     internal
     view
     returns (uint256)
@@ -181,14 +192,15 @@ contract ClockAuctionBase {
                 _auction.startingPriceInRING,
                 _auction.endingPriceInRING,
                 _auction.duration,
-                secondsPassed
+                secondsPassed,
+                _claimBounty
             );
         } else {
             // compatible with first bid
             // as long as price_offered_by_buyer >= 1.1 * currentPice,
             // this buyer will be the lastBidder
-            //TODO: 1.1 * (lastRecord - claimBounty) + claimBounty
-            return ( (11 * (uint256(_auction.lastRecord).sub(claimBounty)) / 10).add(claimBounty));
+            // 1.1 * (lastRecord - claimBounty) + claimBounty
+            return ( (11 * (uint256(_auction.lastRecord).sub(_claimBounty)) / 10).add(_claimBounty));
         }
 
     }
@@ -202,7 +214,8 @@ contract ClockAuctionBase {
         uint256 _startingPriceInRING,
         uint256 _endingPriceInRING,
         uint256 _duration,
-        uint256 _secondsPassed
+        uint256 _secondsPassed,
+        uint256 _claimBounty
     )
     internal
     view
@@ -231,8 +244,7 @@ contract ClockAuctionBase {
             // less that _startingPrice. Thus, this result will always end up positive.
             int256 currentPriceInRING = int256(_startingPriceInRING) + currentPriceInRINGChange;
 
-            //TODO: add claimBounty
-            return (uint256(currentPriceInRING) + claimBounty);
+            return (uint256(currentPriceInRING) + _claimBounty);
         }
     }
 
@@ -261,10 +273,17 @@ contract ClockAuctionBase {
         bidWaitingTime = _waitingMinutes * 1 minutes;
     }
 
-    //TODO: set claimBounty
     function _setClaimBounty(uint _claimBounty) internal {
         claimBounty = _claimBounty;
         emit ClaimBounty(_claimBounty);
+    }
+
+    function _setLandData(address _landData) internal {
+        landData = ILandData(_landData);
+    }
+
+    function _setKTON(address _kton) internal {
+        KTON = ERC20(_kton);
     }
 
     // getexchangerate from tokenVendor

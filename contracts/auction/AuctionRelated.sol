@@ -120,7 +120,7 @@ contract AuctionRelated is Pausable, ClockAuctionBase {
     {
         Auction storage auction = tokenIdToAuction[_tokenId];
         require(_isOnAuction(auction));
-        return _currentPriceInRING(auction);
+        return _currentPriceInRING(auction, claimBounty);
     }
 
     // to apply for the safeTransferFrom
@@ -153,23 +153,24 @@ contract AuctionRelated is Pausable, ClockAuctionBase {
     public
     whenNotPaused
     {
-        require(msg.sender == address(nonFungibleContract));
+        if (msg.sender == address(nonFungibleContract)) {
+            uint256 startingPriceInRING;
+            uint256 endingPriceInRING;
+            uint256 duration;
+            address seller;
 
-        uint256 startingPriceInRING;
-        uint256 endingPriceInRING;
-        uint256 duration;
-        address seller;
+            assembly {
+                let ptr := mload(0x40)
+                calldatacopy(ptr, 0, calldatasize)
+                startingPriceInRING := mload(add(ptr,132))
+                endingPriceInRING := mload(add(ptr,164))
+                duration := mload(add(ptr,196))
+                seller := mload(add(ptr,228))
+            }
 
-        assembly {
-            let ptr := mload(0x40)
-            calldatacopy(ptr, 0, calldatasize)
-            startingPriceInRING := mload(add(ptr,132))
-            endingPriceInRING := mload(add(ptr,164))
-            duration := mload(add(ptr,196))
-            seller := mload(add(ptr,228))
+            _createAuction(_from, _tokenId, startingPriceInRING, endingPriceInRING, duration, seller);
         }
 
-        _createAuction(_from, _tokenId, startingPriceInRING, endingPriceInRING, duration, seller);
     }
 
     // get auction's price of last bidder offered
@@ -195,7 +196,7 @@ contract AuctionRelated is Pausable, ClockAuctionBase {
     // @dev if someone new wants to bid, the lowest price he/she need to afford
     function getNextBidRecord(uint _tokenId) public returns (uint256) {
         Auction storage auction = tokenIdToAuction[_tokenId];
-        return _currentPriceInRING(auction);
+        return _currentPriceInRING(auction, claimBounty);
     }
 
 
