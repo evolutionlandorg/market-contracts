@@ -114,8 +114,6 @@ contract ClockAuction is AuctionRelated {
     function _bidWithToken(address _from, uint256 _tokenId, uint256 _valueInToken) internal returns (uint256){
         // Get a reference to the auction struct
         Auction storage auction = tokenIdToAuction[_tokenId];
-        // require that it is genesis auction
-        require(auction.seller == pangu && msg.sender == pangu);
 
         require(_isOnAuction(auction));
 
@@ -140,7 +138,7 @@ contract ClockAuction is AuctionRelated {
     // @param _data - need to be generated from bytes32(tokenId)
 
     function tokenFallback(address _from, uint256 _valueInToken, bytes _data) public whenNotPaused {
-        uint256 tokenId = bytesToUint256(_data);
+    uint256 tokenId = bytesToUint256(_data);
         Auction storage auction = tokenIdToAuction[tokenId];
         if(_isOnAuction(auction)) {
             if (msg.sender == auction.token) {
@@ -163,19 +161,23 @@ contract ClockAuction is AuctionRelated {
         // then any one can claim this token(land) for lastBidder.
         require(now >= auction.lastBidStartAt + bidWaitingTime,
             "this auction has not finished yet, try again later");
+
         ERC20 token = ERC20(auction.token);
+        address lastBidder = auction.lastBidder;
+        uint lastRecord = auction.lastRecord;
 
         uint claimBounty = token2claimBounty[auction.token];
+
         //prevent re-entry attack
         _removeAuction(_tokenId);
 
-        _transfer(auction.lastBidder, _tokenId);
+        _transfer(lastBidder, _tokenId);
         // if there is claimBounty, then reward who invoke this function
         if (claimBounty > 0) {
             require(token.transfer(msg.sender, claimBounty));
         }
 
-        emit AuctionSuccessful(_tokenId, auction.lastRecord, auction.lastBidder);
+        emit AuctionSuccessful(_tokenId, lastRecord, lastBidder);
     }
 
 
