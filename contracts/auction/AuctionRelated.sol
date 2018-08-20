@@ -61,10 +61,10 @@ contract AuctionRelated is Pausable, ClockAuctionBase {
         Auction storage auction = tokenIdToAuction[_tokenId];
         require(_isOnAuction(auction));
         address seller = auction.seller;
-        require(msg.sender == seller);
+        require(msg.sender == seller || msg.sender == owner);
         // once someone has bidden for this auction, no one has the right to cancel it.
         require(auction.lastBidder == 0x0);
-        _cancelAuction(_tokenId, seller);
+        _cancelAuction(_tokenId,seller);
     }
 
     /// @dev Cancels an auction when the contract is paused.
