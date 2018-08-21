@@ -4,6 +4,7 @@ import "openzeppelin-solidity/contracts/token/ERC721/ERC721Basic.sol";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "./ClockAuction.sol";
 import "./ILandData.sol";
+import './BurnableERC20.sol';
 
 
 contract GenesisAuction is Ownable {
@@ -59,14 +60,14 @@ contract GenesisAuction is Ownable {
 
     function tokenFallback(address _from, uint _amount, bytes _data) public {
         // double check
-        if (msg.sender == ring) {
+        if (msg.sender == address(ring)) {
             return;
         }
 
         if (registeredToken[msg.sender] == true) {
             // burn token after receiving it
             // remember give address(this) authority to burn
-            burn(_amount);
+            BurnableERC20(msg.sender).burn(_amount);
         }
     }
 
@@ -96,7 +97,21 @@ contract GenesisAuction is Ownable {
         registeredToken[_token] = false;
     }
 
+    function setRing(address _ring) public onlyOwner {
+        _setRing(_ring);
+    }
 
+    function setLand(address _land) public onlyOwner {
+        _setLand(_land);
+    }
+
+    function setAuction(address _auction) public onlyOwner {
+        _setAuction(_auction);
+    }
+
+    function setLandData(address _landData) public onlyOwner {
+        _setLandData(_landData);
+    }
 
     function _setRing(address _ring) internal {
         ring = ERC20(_ring);
