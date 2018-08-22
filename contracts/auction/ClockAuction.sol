@@ -40,7 +40,7 @@ contract ClockAuction is AuctionRelated {
         // members in resourcesPool refer to
         // goldPool, woodPool, waterPool, firePool, soilPool respectively
         uint[5] memory resourcesPool = [uint(10439), 419, 5258, 12200, 10826];
-        rewardBox = new RewardBox(_landData, address(this), resourcesPool);
+        rewardBox = new RewardBox(_landData, resourcesPool);
     }
 
     modifier isHuman() {
