@@ -1,7 +1,8 @@
 pragma solidity ^0.4.23;
 
-import "./ClockAuctionBase.sol";
 import "openzeppelin-solidity/contracts/lifecycle/Pausable.sol";
+import "./ClockAuctionBase.sol";
+
 
 /// @title Clock auction for non-fungible tokens.
 contract AuctionRelated is Pausable, ClockAuctionBase {
