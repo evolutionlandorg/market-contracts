@@ -34,7 +34,7 @@ contract ClockAuction is AuctionRelated {
         _setBidWaitingTime(_waitingMinutes);
         _setClaimBounty(_RING, _claimBountyForRING);
         _setPangu(_pangu);
-        landData = _landData;
+        landData = ILandData(_landData);
         // convert the first on into uint to avoid error
         // because the default type is uint8[]
         // members in resourcesPool refer to
@@ -46,8 +46,6 @@ contract ClockAuction is AuctionRelated {
     modifier isHuman() {
         require (msg.sender == tx.origin, "robot is not permitted");
         _;
-
-
     }
 
     /// @notice This method can be used by the owner to extract mistakenly
