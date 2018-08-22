@@ -4,6 +4,9 @@ import "openzeppelin-solidity/contracts/token/ERC721/ERC721Basic.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "./ITokenVendor.sol";
+import "./ILandData.sol";
+import "./RewardBox.sol";
+
 
 
 /// @title Auction Core
@@ -53,9 +56,14 @@ contract ClockAuctionBase {
     // address of tokenvendor which exchange eth to ring or ring to eth
     ITokenVendor public tokenVendor;
 
-    //TODO: add genesis landlorder
-    // genesis landlorder, pangu is the creator of all in certain version of Chinese mythology.
+    // genesis landholder, pangu is the creator of all in certain version of Chinese mythology.
     address public pangu;
+
+    // address of reward boxes
+    RewardBox public rewardBox;
+
+    // address of LandData
+    ILandData public landData;
 
     // necessary period of time from invoking bid action to successfully taking the land asset.
     // if someone else bid the same auction with higher price and within bidWaitingTime, your bid failed.

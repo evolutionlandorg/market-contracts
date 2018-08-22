@@ -7,7 +7,7 @@ import "./ILandData.sol";
 import './BurnableERC20.sol';
 
 
-contract GenesisAuction is Ownable {
+contract GenesisHolder is Ownable {
 
     ERC20 public ring;
 
@@ -37,7 +37,6 @@ contract GenesisAuction is Ownable {
         uint256 _startingPriceInToken,
         uint256 _endingPriceInToken,
         uint256 _duration,
-        address _seller,
         address _token)
     public
     onlyOwner {

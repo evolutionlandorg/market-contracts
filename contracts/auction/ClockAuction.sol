@@ -18,7 +18,8 @@ contract ClockAuction is AuctionRelated {
         uint256 _cut,
         uint256 _waitingMinutes,
         uint256 _claimBountyForRING,
-        address _pangu
+        address _pangu,
+        address _landData
         )
     public {
         require(_cut <= 10000);
@@ -33,6 +34,13 @@ contract ClockAuction is AuctionRelated {
         _setBidWaitingTime(_waitingMinutes);
         _setClaimBounty(_RING, _claimBountyForRING);
         _setPangu(_pangu);
+        landData = _landData;
+        // convert the first on into uint to avoid error
+        // because the default type is uint8[]
+        // members in resourcesPool refer to
+        // goldPool, woodPool, waterPool, firePool, soilPool respectively
+        uint[5] memory resourcesPool = [uint(10439), 419, 5258, 12200, 10826];
+        rewardBox = new RewardBox(_landData, address(this), resourcesPool);
     }
 
     /// @notice This method can be used by the owner to extract mistakenly
@@ -161,6 +169,12 @@ contract ClockAuction is AuctionRelated {
         // then any one can claim this token(land) for lastBidder.
         require(now >= auction.lastBidStartAt + bidWaitingTime,
             "this auction has not finished yet, try again later");
+
+        // if this land asset has reward box on it,
+        // unboxing it will raise resource limit to this land
+        if(landData.hasBox(_tokenId)) {
+            rewardBox.unbox(_tokenId);
+        }
 
         ERC20 token = ERC20(auction.token);
         address lastBidder = auction.lastBidder;
