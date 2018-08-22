@@ -46,6 +46,8 @@ contract ClockAuction is AuctionRelated {
     modifier isHuman() {
         require (msg.sender == tx.origin, "robot is not permitted");
         _;
+
+
     }
 
     /// @notice This method can be used by the owner to extract mistakenly
