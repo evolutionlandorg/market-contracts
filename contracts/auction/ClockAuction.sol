@@ -43,6 +43,11 @@ contract ClockAuction is AuctionRelated {
         rewardBox = new RewardBox(_landData, address(this), resourcesPool);
     }
 
+    modifier isHuman() {
+        require (msg.sender == tx.origin, "robot is not permitted");
+        _;
+    }
+
     /// @notice This method can be used by the owner to extract mistakenly
     ///  sent tokens to this contract.
     /// @param _token The address of the token contract that you want to recover
@@ -159,7 +164,7 @@ contract ClockAuction is AuctionRelated {
 
     // TODO: advice: offer some reward for the person who claimed
     // @dev claim _tokenId for auction's lastBidder
-    function claimLandAsset(uint _tokenId) public {
+    function claimLandAsset(uint _tokenId) public isHuman {
         // Get a reference to the auction struct
         Auction storage auction = tokenIdToAuction[_tokenId];
 
