@@ -1,15 +1,17 @@
 pragma solidity ^0.4.23;
 
 import "./ILandData.sol";
-import "./ClockAuction.sol";
+import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 
 contract RewardBox is Ownable {
+    using SafeMath for *;
 
     ILandData public landData;
 
-    ClockAuction public auction;
+    address public auction;
 
-    // the key of resourcePool are 1,2,3,4,5
+    // the key of resourcePool are 0,1,2,3,4
     // respectively refer to gold,wood,water,fire,soil
     mapping (uint256 => uint256) resourcePool;
 
@@ -18,7 +20,7 @@ contract RewardBox is Ownable {
 
     constructor(address _landData, uint256[5] _resources) public {
         landData = ILandData(_landData);
-        auction = Auction(msg.sender);
+        auction = msg.sender;
         totalBoxNotOpened = 176;
         for(uint i = 1; i <= 5; i ++) {
             _setResourcePool(i, _resources[i]);
@@ -30,18 +32,18 @@ contract RewardBox is Ownable {
     public
     returns (uint, uint, uint, uint, uint){
         // this is invoked in auction.claimLandAsset
-        require(msg.sender == address(auction));
+        require(msg.sender == auction);
 
-        uint[5] resourcesReward;
-        (resourcesReward[1], resourcesReward[2],
-        resourcesReward[3], resourcesReward[4], resourcesReward[5]) = _computeReward();
+        uint[5] memory resourcesReward;
+        (resourcesReward[0], resourcesReward[1],
+        resourcesReward[2], resourcesReward[3], resourcesReward[4]) = _computeReward();
 
-        for(uint i = 1; i <= 5; i++) {
+        for(uint i = 0; i < 5; i++) {
             landData.modifyAttibutes(_tokenId, 32+16*i, 47+16*i, resourcesReward[i]);
         }
 
-        return (resourcesReward[1], resourcesReward[2],
-        resourcesReward[3], resourcesReward[4], resourcesReward[5]);
+        return (resourcesReward[0], resourcesReward[1], resourcesReward[2],
+        resourcesReward[3], resourcesReward[4]);
     }
 
     // rewards ranges from [0, 2 * average_of_resourcePool_left]
@@ -51,7 +53,7 @@ contract RewardBox is Ownable {
     function _computeReward() internal returns(uint,uint,uint,uint,uint) {
         require(totalBoxNotOpened > 0);
 
-        uint[5] resourceRewards;
+        uint[5] memory resourceRewards;
         // from fomo3d
         // msg.sender is always address(auction),
         // so change msg.sender to tx.origin
@@ -65,13 +67,13 @@ contract RewardBox is Ownable {
             )));
 
 
-            for(uint i = 1; i <= 5; i ++) {
+            for(uint i = 0; i < 5; i++) {
                 if (totalBoxNotOpened > 1) {
                     // recources in resourcePool is set by owner
                     // nad totalBoxNotOpened is set by rules
                     // there is no need to consider overflow
                 // goldReward, woodReward, waterReward, fireReward, soilReward
-                resouceRewards[i] = seed % (2 * resourcePool[i] / totalBoxNotOpened);
+                resourceRewards[i] = seed % (2 * resourcePool[i] / totalBoxNotOpened);
                 // update resourcePool
                 _setResourcePool(i, resourcePool[i] - resourceRewards[i]);
                 }
@@ -84,13 +86,13 @@ contract RewardBox is Ownable {
 
         totalBoxNotOpened--;
 
-        return (resourceRewards[1], resourceRewards[2], resourceRewards[3], resourceRewards[4], resourceRewards[5]);
+        return (resourceRewards[0],resourceRewards[1], resourceRewards[2], resourceRewards[3], resourceRewards[4]);
 
     }
 
 
     function _setResourcePool(uint _keyNumber, uint _resources) internal {
-        require(_keyNumber >= 1 && _keyNumber <= 5);
+        require(_keyNumber >= 0 && _keyNumber < 5);
         resourcePool[_keyNumber] = _resources;
     }
 
