@@ -42,9 +42,9 @@ contract AuctionRelated is Pausable, ClockAuctionBase {
             uint64(now),
             //TODO: add auction.token
             _token,
-            // which refer to lastRecord, lastBidder, lastBidStartAt
+            // which refer to lastRecord, lastBidder, lastBidStartAt,lastReferer
             // all set to zero when initialized
-            0,0x0,0
+            0,0x0,0,0x0
         );
         _addAuction(_tokenId, auction);
     }
@@ -99,7 +99,8 @@ contract AuctionRelated is Pausable, ClockAuctionBase {
         address token,
         uint128 lastRecord,
         address lastBidder,
-        uint256 lastBidStartAt
+        uint256 lastBidStartAt,
+        address lastReferer
     ) {
         Auction storage auction = tokenIdToAuction[_tokenId];
         require(_isOnAuction(auction));
@@ -112,7 +113,8 @@ contract AuctionRelated is Pausable, ClockAuctionBase {
         auction.token,
         auction.lastRecord,
         auction.lastBidder,
-        auction.lastBidStartAt
+        auction.lastBidStartAt,
+        auction.lastReferer
         );
     }
 
