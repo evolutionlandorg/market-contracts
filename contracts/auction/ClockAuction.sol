@@ -69,20 +69,20 @@ contract ClockAuction is AuctionRelated {
     /// @dev Bids on an open auction, completing the auction and transferring
     ///  ownership of the NFT if enough Ether is supplied.
     /// @param _tokenId - ID of token to bid on.
-    function bidWithETH(uint256 _tokenId)
+    function bidWithETH(uint256 _tokenId, address _referer)
     public
     payable
     whenNotPaused
     {
 
         // _bid will throw if the bid or funds transfer fails
-        _bidWithETH(_tokenId, msg.value, msg.sender);
+        _bidWithETH(_tokenId, msg.value, msg.sender, _referer);
     }
 
 
     /// @dev bid with eth(in wei). Computes the price and transfers winnings.
     /// Does NOT transfer ownership of token.
-    function _bidWithETH(uint256 _tokenId, uint256 _bidAmount, address _buyer)
+    function _bidWithETH(uint256 _tokenId, uint256 _bidAmount, address _buyer, address _referer)
     internal
     returns (uint256)
     {
@@ -112,11 +112,11 @@ contract ClockAuction is AuctionRelated {
         // if someone has already bidden for it before, priceInRING is last bidder's offer
         uint priceInRING = _currentPriceInToken(auction);
 
-        uint bidMoment = _buyProcess(_buyer, auction, priceInRING);
+        uint bidMoment = _buyProcess(_buyer, auction, priceInRING, _referer);
 
         // Tell the world!
         // 0x0 refers to ETH
-        emit NewBid(_tokenId, _buyer, priceInRING, 0x0, bidMoment);
+        emit NewBid(_tokenId, _buyer, _referer, priceInRING, 0x0, bidMoment);
 
         return priceInRING;
     }
@@ -124,7 +124,7 @@ contract ClockAuction is AuctionRelated {
 
 
     // @dev bid with RING. Computes the price and transfers winnings.
-    function _bidWithToken(address _from, uint256 _tokenId, uint256 _valueInToken) internal returns (uint256){
+    function _bidWithToken(address _from, uint256 _tokenId, uint256 _valueInToken, address _referer) internal returns (uint256){
         // Get a reference to the auction struct
         Auction storage auction = tokenIdToAuction[_tokenId];
 
@@ -135,10 +135,10 @@ contract ClockAuction is AuctionRelated {
         require(_valueInToken >= priceInToken,
             "your offer is lower than the current price, try again with a higher one.");
 
-        uint bidMoment = _buyProcess(_from, auction, priceInToken);
+        uint bidMoment = _buyProcess(_from, auction, priceInToken, _referer);
 
         // Tell the world!
-        emit NewBid(_tokenId, _from, priceInToken, auction.token, bidMoment);
+        emit NewBid(_tokenId, _from, _referer, priceInToken, auction.token, bidMoment);
 
         return priceInToken;
     }
@@ -148,16 +148,23 @@ contract ClockAuction is AuctionRelated {
     // here to handle bid for LAND(NFT) using RING
     // @dev bidder must use RING.transfer(address(this), _valueInRING, bytes32(_tokenId)
     // to invoke this function
-    // @param _data - need to be generated from bytes32(tokenId)
+    // @param _data - need to be generated from (tokenId + referer)
 
     function tokenFallback(address _from, uint256 _valueInToken, bytes _data) public whenNotPaused {
-    uint256 tokenId = bytesToUint256(_data);
+        uint tokenId;
+        address referer;
+        assembly {
+            let ptr := mload(0x40)
+            calldatacopy(ptr, 0, calldatasize)
+            tokenId := mload(add(ptr, 132))
+            referer := mload(add(ptr, 164))
+        }
+
         Auction storage auction = tokenIdToAuction[tokenId];
         if(_isOnAuction(auction)) {
             if (msg.sender == auction.token) {
-                // assure it is uint256 for security
-                require(_data.length == 32);
-                _bidWithToken(_from, tokenId, _valueInToken);
+                //TODO: modified
+                _bidWithToken(_from, tokenId, _valueInToken, referer);
             }
         }
     }
@@ -184,8 +191,11 @@ contract ClockAuction is AuctionRelated {
         ERC20 token = ERC20(auction.token);
         address lastBidder = auction.lastBidder;
         uint lastRecord = auction.lastRecord;
+        address lastReferer = auction.lastReferer;
 
         uint claimBounty = token2claimBounty[auction.token];
+        // if Auction is sucessful, refererBounty is taken on by evolutionland
+        uint refererBounty = _computeCut(lastRecord.sub(claimBounty) / 11);
 
         //prevent re-entry attack
         _removeAuction(_tokenId);
@@ -194,6 +204,7 @@ contract ClockAuction is AuctionRelated {
         // if there is claimBounty, then reward who invoke this function
         if (claimBounty > 0) {
             require(token.transfer(msg.sender, claimBounty));
+            require(token.transfer(lastReferer, refererBounty));
         }
 
         emit AuctionSuccessful(_tokenId, lastRecord, lastBidder);
@@ -201,28 +212,31 @@ contract ClockAuction is AuctionRelated {
 
 
     // TODO: add _token to compatible backwards with ring and eth
-    function _buyProcess(address _buyer, Auction storage _auction, uint _priceInToken)
+    function _buyProcess(address _buyer, Auction storage _auction, uint _priceInToken, address _referer)
     internal
     canBeStoredWith128Bits(_priceInToken)
     returns (uint256){
 
-        ERC20 token = ERC20(_auction.token);
         uint claimBounty = token2claimBounty[_auction.token];
-
         uint priceWithoutBounty = _priceInToken.sub(claimBounty);
 
         // last bidder's info
         address lastBidder;
         // last bidder's price
         uint lastRecord;
+        // last bidder's referer
+        address lastReferer;
+
         lastBidder = _auction.lastBidder;
         lastRecord = uint256(_auction.lastRecord);
+        lastReferer = _auction.lastReferer;
 
         // modify bid-related member variables
-        uint bidMoment = now;
+
         _auction.lastBidder = _buyer;
         _auction.lastRecord = uint128(_priceInToken);
-        _auction.lastBidStartAt = bidMoment;
+        _auction.lastBidStartAt = now;
+        _auction.lastReferer = _referer;
 
         // Grab a reference to the seller before the auction struct
         // gets deleted.
@@ -237,7 +251,7 @@ contract ClockAuction is AuctionRelated {
             // we dont touch claimBounty
             uint256 sellerProceedsInToken = priceWithoutBounty - _computeCut(priceWithoutBounty);
             // transfer to the seller
-            token.transfer(seller, sellerProceedsInToken);
+            ERC20(_auction.token).transfer(seller, sellerProceedsInToken);
         }
 
         // TODO: the math calculation needs further check
@@ -254,11 +268,18 @@ contract ClockAuction is AuctionRelated {
             // we dont touch claimBounty
             uint extraForEach = (_priceInToken.sub(lastRecord)) / 2;
             uint realReturn = extraForEach.sub(_computeCut(extraForEach));
-            token.transfer(seller, realReturn);
-            token.transfer(lastBidder, (realReturn + lastRecord));
+            if (_referer == 0x0) {
+                ERC20(_auction.token).transfer(seller, realReturn);
+                ERC20(_auction.token).transfer(lastBidder, (realReturn + lastRecord));
+            } else {
+                ERC20(_auction.token).transfer(seller, realReturn);
+                ERC20(_auction.token).transfer(lastBidder, ((9 * realReturn / 10) + lastRecord));
+                ERC20(_auction.token).transfer(_referer, realReturn / 10);
+            }
+
         }
 
-        return bidMoment;
+        return _auction.lastBidStartAt;
     }
 
 
@@ -275,14 +296,14 @@ contract ClockAuction is AuctionRelated {
         _setPangu(_pangu);
     }
 
-    function bytesToUint256(bytes b) public pure returns (uint256) {
-        bytes32 out;
-
-        for (uint i = 0; i < 32; i++) {
-            out |= bytes32(b[i] & 0xFF) >> (i * 8);
-        }
-        return uint256(out);
-    }
+//    function bytesToUint256(bytes b) public pure returns (uint256) {
+//        bytes32 out;
+//
+//        for (uint i = 0; i < 32; i++) {
+//            out |= bytes32(b[i] & 0xFF) >> (i * 8);
+//        }
+//        return uint256(out);
+//    }
 
 
 }

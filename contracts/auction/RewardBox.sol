@@ -9,8 +9,6 @@ contract RewardBox is Ownable {
 
     ILandData public landData;
 
-    address public auction;
-
     // the key of resourcePool are 0,1,2,3,4
     // respectively refer to gold,wood,water,fire,soil
     mapping (uint256 => uint256) resourcePool;
@@ -18,9 +16,9 @@ contract RewardBox is Ownable {
     // number of box left
     uint totalBoxNotOpened;
 
+    // this need to be created in ClockAuction cotnract
     constructor(address _landData, uint256[5] _resources) public {
         landData = ILandData(_landData);
-        auction = msg.sender;
         totalBoxNotOpened = 176;
         for(uint i = 1; i <= 5; i ++) {
             _setResourcePool(i, _resources[i]);
@@ -32,7 +30,7 @@ contract RewardBox is Ownable {
     public
     returns (uint, uint, uint, uint, uint){
         // this is invoked in auction.claimLandAsset
-        require(msg.sender == auction);
+        require(msg.sender == owner);
 
         uint[5] memory resourcesReward;
         (resourcesReward[0], resourcesReward[1],

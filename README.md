@@ -4,7 +4,16 @@ this project implements the whole Dutch Auction.
 此项目实现了完整的荷兰式拍卖
 
 ## 拍卖合约
+(只需要部署`ClockAuction`)
 `ClockAuction.sol`
+### 前置准备
+在部署`ClockAuction`之前需要部署的合约如下:
+1. Land合约
+2. RING合约
+3. tokenVendor合约 (用于ETH和RING相互转换)
+4. GenesisHolder合约 (即ClockAucion中的pangu)
+5. LandData合约 (存储地块属性)
+
 
 ## 初始化相关
 在合约的构造器中涉及到的参数，其意义分别是：
@@ -15,6 +24,7 @@ this project implements the whole Dutch Auction.
 5. uint245 _waitingMinutes: 每次竞拍等待的最长时间，填入分钟数
 6. uint256 _claimBountyForRING: ring的claimBounty，建议设置成10-20个ring(记得*10^18)
 7. address _pangu: 拍卖的分账合约，执行初代拍卖的合约
+8. address _landData: 地块信息的合约地址
 
 
 ## 拍卖操作相关
@@ -40,7 +50,18 @@ this project implements the whole Dutch Auction.
 使用`clockAunction.sol`中`getCurrentPriceInToken`方法
 
 ### 5. 使用RING来竞拍地块
-发送要竞拍某次拍卖使用的RING的数量，到`clockAunction`合约中，使用RING.transfer(address(BidAuctionRING),ringAmount,bytes(tokenId))即可
+发送要竞拍某次拍卖使用的RING的数量，到`clockAunction`合约中，使用RING.transfer(address(BidAuctionRING),ringAmount,data)即可。
+其中data的长度为bytes64,组成如下：
+1. 第一个bytes32: tokenId(注意必须是64位原始格式，不要写十进制格式)
+2. 第二个bytes32: 推荐人的address
+
+data的例子如下（分行仅为显示清晰）：
+```bash
+0x
+0000000000000000000000000000000100000000000000000000000000000001
+000000000000000000000000375eae23b65feb1833072328647902f1fe9afa61
+
+```
 
 **注意**：需要把tokenId转换成bytes格式
 

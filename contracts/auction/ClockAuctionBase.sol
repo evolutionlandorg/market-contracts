@@ -37,7 +37,8 @@ contract ClockAuctionBase {
         address lastBidder;
         // latestBidder's bidTime in timestamp
         uint256 lastBidStartAt;
-
+        // lastBidder's referer
+        address lastReferer;
     }
 
     // Reference to contract tracking NFT ownership
@@ -85,7 +86,7 @@ contract ClockAuctionBase {
 
     // new bid event
 
-    event NewBid(uint256 indexed tokenId, address lastBidder, uint256 lastRecord, address tokenAddress, uint256 bidStartAt);
+    event NewBid(uint256 indexed tokenId, address lastBidder, address lastReferer, uint256 lastRecord, address tokenAddress, uint256 bidStartAt);
 
     // set claimBounty
     event ClaimBounty(address indexed _token, uint256 indexed _claimBounty);
