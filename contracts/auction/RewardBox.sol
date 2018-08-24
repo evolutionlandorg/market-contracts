@@ -11,16 +11,16 @@ contract RewardBox is Ownable {
 
     // the key of resourcePool are 0,1,2,3,4
     // respectively refer to gold,wood,water,fire,soil
-    mapping (uint256 => uint256) resourcePool;
+    mapping (uint256 => uint256) public resourcePool;
 
     // number of box left
-    uint totalBoxNotOpened;
+    uint public totalBoxNotOpened;
 
     // this need to be created in ClockAuction cotnract
     constructor(address _landData, uint256[5] _resources) public {
         landData = ILandData(_landData);
         totalBoxNotOpened = 176;
-        for(uint i = 1; i <= 5; i ++) {
+        for(uint i = 0; i < 5; i++) {
             _setResourcePool(i, _resources[i]);
         }
     }
