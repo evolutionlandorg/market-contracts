@@ -8,22 +8,19 @@ contract ClockAuction is AuctionRelated {
     ///  and verifies the owner cut is in the valid range.
     /// @param _nftAddress - address of a deployed contract implementing
     ///  the Nonfungible Interface.
-    /// @param _cut - percent cut the owner takes on each auction, must be
+    ///  _cut - percent cut the owner takes on each auction, must be
     ///  between 0-10,000. It can be considered as transaction fee.
-    /// @param _waitingMinutes - biggest waiting time from a bid's starting to ending(in minutes)
+    ///  bidWaitingMinutes - biggest waiting time from a bid's starting to ending(in minutes)
     constructor(
         address _nftAddress,
         address _RING,
         address _tokenVendor,
-        uint256 _cut,
-        uint256 _waitingMinutes,
-        uint256 _claimBountyForRING,
         address _pangu,
         address _landData
         )
     public {
-        require(_cut <= 10000);
-        ownerCut = _cut;
+        // set ownerCut to 4%
+        ownerCut = 400;
 
         ERC721Basic candidateContract = ERC721Basic(_nftAddress);
         // InterfaceId_ERC721 = 0x80ac58cd;
@@ -31,8 +28,10 @@ contract ClockAuction is AuctionRelated {
         nonFungibleContract = candidateContract;
         _setRING(_RING);
         _setTokenVendor(_tokenVendor);
-        _setBidWaitingTime(_waitingMinutes);
-        _setClaimBounty(_RING, _claimBountyForRING);
+        // bidWatingTime is 30 minutes
+        _setBidWaitingTime(30);
+        // claimBounty of ring is 20 ring
+        _setClaimBounty(_RING, 20000000000000000000);
         _setPangu(_pangu);
         landData = ILandData(_landData);
         // convert the first on into uint to avoid error
