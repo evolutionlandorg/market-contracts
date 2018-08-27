@@ -7,7 +7,7 @@ import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 contract RewardBox is Ownable {
     using SafeMath for *;
 
-    address public landData;
+    ILandData public landData;
 
     // the key of resourcePool are 0,1,2,3,4
     // respectively refer to gold,wood,water,fire,soil
@@ -18,7 +18,7 @@ contract RewardBox is Ownable {
 
     // this need to be created in ClockAuction cotnract
     constructor(address _landData, uint256[5] _resources) public {
-        landData = _landData;
+        landData = ILandData(_landData);
         totalBoxNotOpened = 176;
         for(uint i = 0; i < 5; i++) {
             _setResourcePool(i, _resources[i]);
@@ -32,12 +32,18 @@ contract RewardBox is Ownable {
         // this is invoked in auction.claimLandAsset
         require(msg.sender == owner);
 
+        //resourcesExist[0, 4] is gold,wood,water,fire,soil resources rate's limit
+        // resourcesExist[5] is flag, and not used
+        uint[6] memory resourcesExist;
+        (resourcesExist[0],resourcesExist[1],resourcesExist[2],resourcesExist[3],
+        resourcesExist[4],resourcesExist[5]) = landData.getDetailsFromLandInfo(_tokenId);
+
         uint[5] memory resourcesReward;
         (resourcesReward[0], resourcesReward[1],
         resourcesReward[2], resourcesReward[3], resourcesReward[4]) = _computeReward();
 
         for(uint i = 0; i < 5; i++) {
-            ILandData(landData).modifyAttibutes(_tokenId, 32+16*i, 47+16*i, resourcesReward[i]);
+            landData.modifyAttributes(_tokenId, 16*i, 15+16*i, resourcesReward[i] + resourcesExist[i]);
         }
 
         return (resourcesReward[0], resourcesReward[1], resourcesReward[2],
