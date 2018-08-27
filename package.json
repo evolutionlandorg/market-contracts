@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/evolutionlandorg/market-contracts#readme",
   "dependencies": {
+    "bancor-contracts": "^0.4.3",
     "openzeppelin-solidity": "^1.11.0-rc.1",
     "truffle-hdwallet-provider": "0.0.6"
   }
