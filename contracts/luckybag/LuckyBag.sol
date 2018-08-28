@@ -29,7 +29,7 @@ contract LuckyBag is Pausable {
     function buyBags(address _buyer, uint256 _goldBagAmount, uint256 _silverBagAmount) payable whenNotPaused {
         require(_buyer != address(0));
         uint256 charge = _goldBagAmount.mul(goldBagPrice).add(_silverBagAmount.mul(silverBagPrice));
-        require(msg.value > charge, "No enough ether for buying lucky bags.");
+        require(msg.value >= charge, "No enough ether for buying lucky bags.");
         require(_goldBagAmount > 0 || _silverBagAmount > 0);
 
         if (_goldBagAmount > 0)
