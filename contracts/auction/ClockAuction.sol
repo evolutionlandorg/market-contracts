@@ -110,6 +110,7 @@ contract ClockAuction is AuctionRelated {
         }
 
         // assure that this get ring back from tokenVendor
+        // TODO: after tokenVendor introducing bancor protocol, check this again!
         require(tokenVendor.buyToken.value(priceInETH)(address(this)));
 
         // if no one has bidden for auction, priceInRING is computed through linear operation
