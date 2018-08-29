@@ -4,8 +4,8 @@ import "openzeppelin-solidity/contracts/token/ERC721/ERC721Basic.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "./RewardBox.sol";
-import "./interfaces/ILandData.sol";
-import "./interfaces/ITokenVendor.sol";
+import "evolutionlandcommon/contracts/interfaces/ILandData.sol";
+import "evolutionlandcommon/contracts/interfaces/ITokenVendor.sol";
 
 
 

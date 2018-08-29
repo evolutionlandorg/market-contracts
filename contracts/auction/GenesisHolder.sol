@@ -1,21 +1,19 @@
 pragma solidity ^0.4.23;
+
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "openzeppelin-solidity/contracts/token/ERC721/ERC721Basic.sol";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
+import "evolutionlandcommon/contracts/interfaces/ISettingsRegistry.sol";
+import "evolutionlandcommon/contracts/interfaces/ILandData.sol";
+import 'evolutionlandcommon/contracts/interfaces/IBurnableERC20.sol';
+import 'evolutionlandcommon/contracts/SettingIds.sol';
 import "./ClockAuction.sol";
-import "./interfaces/ILandData.sol";
-import './interfaces/IBurnableERC20.sol';
 
 
-contract GenesisHolder is Ownable {
+contract GenesisHolder is Ownable, SettingIds {
+    ISettingsRegistry public registry; 
 
     ERC20 public ring;
-
-    ERC721Basic public land;
-
-    ClockAuction public auction;
-
-    ILandData public landData;
 
     // registered land-related token to this
     // do not register ring
@@ -24,11 +22,9 @@ contract GenesisHolder is Ownable {
     // claimedToken event
     event ClaimedTokens(address indexed token, address indexed owner, uint amount);
 
-    constructor(address _ring, address _land, address _auction, address _landData) public {
+    constructor(ISettingsRegistry _registry, address _ring) public {
+        registry = _registry;
         _setRing(_ring);
-        _setLand(_land);
-        _setAuction(_auction);
-        _setLandData(_landData);
     }
 
 
@@ -40,11 +36,14 @@ contract GenesisHolder is Ownable {
         address _token)
     public
     onlyOwner {
+        ILandData landData = ILandData(registry.addressOf(SettingIds.CONTRACT_LAND_DATA));
         // reserved land do not allow ring for genesis auction
         if (landData.isReserved(_tokenId)) {
             require(_token != address(ring));
         }
 
+        ClockAuction auction = ClockAuction(registry.addressOf(SettingIds.CONTRACT_CLOCK_AUCTION));
+        ERC721Basic land = ERC721Basic(registry.addressOf(SettingIds.CONTRACT_ATLANTIS_ERC721LAND));
         // aprove land to auction contract
         land.approve(address(auction), _tokenId);
         // create an auciton
@@ -54,6 +53,7 @@ contract GenesisHolder is Ownable {
 
 
     function cancelAuction(uint256 _tokenId) public onlyOwner {
+        ClockAuction auction = ClockAuction(registry.addressOf(SettingIds.CONTRACT_CLOCK_AUCTION));
         auction.cancelAuction(_tokenId);
     }
 
@@ -100,31 +100,7 @@ contract GenesisHolder is Ownable {
         _setRing(_ring);
     }
 
-    function setLand(address _land) public onlyOwner {
-        _setLand(_land);
-    }
-
-    function setAuction(address _auction) public onlyOwner {
-        _setAuction(_auction);
-    }
-
-    function setLandData(address _landData) public onlyOwner {
-        _setLandData(_landData);
-    }
-
     function _setRing(address _ring) internal {
         ring = ERC20(_ring);
-    }
-
-    function _setLand(address _land) internal {
-        land = ERC721Basic(_land);
-    }
-
-    function _setAuction(address _auction) internal {
-        auction = ClockAuction(_auction);
-    }
-
-    function _setLandData(address _landData) internal {
-        landData = ILandData(_landData);
     }
 }
