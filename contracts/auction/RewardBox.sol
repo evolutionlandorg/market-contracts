@@ -43,6 +43,7 @@ contract RewardBox is Ownable {
         resourcesReward[2], resourcesReward[3], resourcesReward[4]) = _computeReward();
 
         for(uint i = 0; i < 5; i++) {
+            // TODO: need add reward box to landData's admin roles;
             landData.modifyAttributes(_tokenId, 16*i, 15+16*i, resourcesReward[i] + resourcesExist[i]);
         }
 
