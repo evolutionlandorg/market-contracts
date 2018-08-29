@@ -176,7 +176,7 @@ contract AuctionRelated is Pausable, ClockAuctionBase {
                 seller := mload(add(ptr,228))
             }
             //TODO: add parameter _token
-            _createAuction(_from, _tokenId, startingPriceInRING, endingPriceInRING, duration, seller,address(RING));
+            _createAuction(_from, _tokenId, startingPriceInRING, endingPriceInRING, duration, seller, address(RING));
         }
 
     }
