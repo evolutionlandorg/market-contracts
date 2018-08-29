@@ -1,8 +1,8 @@
 pragma solidity ^0.4.23;
 
-import "./ILandData.sol";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "./interfaces/ILandData.sol";
 
 contract RewardBox is Ownable {
     using SafeMath for *;
@@ -16,6 +16,9 @@ contract RewardBox is Ownable {
     // number of box left
     uint public totalBoxNotOpened;
 
+    // event unbox
+    event Unbox(uint indexed tokenId, uint goldRate, uint woodRate, uint waterRate, uint fireRate, uint soilRate);
+
     // this need to be created in ClockAuction cotnract
     constructor(address _landData, uint256[5] _resources) public {
         landData = ILandData(_landData);
@@ -26,11 +29,11 @@ contract RewardBox is Ownable {
     }
 
     //TODO: consider authority again
+    // this is invoked in auction.claimLandAsset
     function unbox(uint256 _tokenId)
     public
+    onlyOwner
     returns (uint, uint, uint, uint, uint){
-        // this is invoked in auction.claimLandAsset
-        require(msg.sender == owner);
 
         //resourcesExist[0, 4] is gold,wood,water,fire,soil resources rate's limit
         // resourcesExist[5] is flag, and not used
@@ -46,6 +49,9 @@ contract RewardBox is Ownable {
             // TODO: need add reward box to landData's admin roles;
             landData.modifyAttributes(_tokenId, 16*i, 15+16*i, resourcesReward[i] + resourcesExist[i]);
         }
+
+        emit Unbox(_tokenId, resourcesReward[0], resourcesReward[1], resourcesReward[2],
+            resourcesReward[3], resourcesReward[4]);
 
         return (resourcesReward[0], resourcesReward[1], resourcesReward[2],
         resourcesReward[3], resourcesReward[4]);

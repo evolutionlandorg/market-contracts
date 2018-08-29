@@ -72,6 +72,7 @@ contract ClockAuction is AuctionRelated {
     public
     payable
     whenNotPaused
+    isHuman
     {
 
         // _bid will throw if the bid or funds transfer fails
@@ -103,9 +104,13 @@ contract ClockAuction is AuctionRelated {
         require(_bidAmount >= priceInETH,
             "your offer is lower than the current price, try again with a higher one.");
 
-        // assure that this get ring back from tokenVendor
-        require(tokenVendor.buyToken.value(_bidAmount)(address(this)));
+        uint refund = _bidAmount - priceInETH;
+        if (refund > 0) {
+            _buyer.transfer(refund);
+        }
 
+        // assure that this get ring back from tokenVendor
+        require(tokenVendor.buyToken.value(priceInETH)(address(this)));
 
         // if no one has bidden for auction, priceInRING is computed through linear operation
         // if someone has already bidden for it before, priceInRING is last bidder's offer
@@ -115,7 +120,7 @@ contract ClockAuction is AuctionRelated {
 
         // Tell the world!
         // 0x0 refers to ETH
-        emit NewBid(_tokenId, _buyer, _referer, priceInRING, 0x0, bidMoment);
+        emit NewBid(_tokenId, _buyer, _referer, priceInETH, 0x0, bidMoment);
 
         return priceInRING;
     }
@@ -133,6 +138,11 @@ contract ClockAuction is AuctionRelated {
         uint priceInToken = _currentPriceInToken(auction);
         require(_valueInToken >= priceInToken,
             "your offer is lower than the current price, try again with a higher one.");
+        uint refund = _valueInToken - priceInToken;
+
+        if (refund > 0) {
+            ERC20(auction.token).transfer(_from, refund);
+        }
 
         uint bidMoment = _buyProcess(_from, auction, priceInToken, _referer);
 
