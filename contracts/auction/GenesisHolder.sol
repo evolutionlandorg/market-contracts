@@ -3,8 +3,8 @@ import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "openzeppelin-solidity/contracts/token/ERC721/ERC721Basic.sol";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "./ClockAuction.sol";
-import "./ILandData.sol";
-import './BurnableERC20.sol';
+import "./interfaces/ILandData.sol";
+import './interfaces/IBurnableERC20.sol';
 
 
 contract GenesisHolder is Ownable {
@@ -66,7 +66,7 @@ contract GenesisHolder is Ownable {
         if (registeredToken[msg.sender] == true) {
             // burn token after receiving it
             // remember give address(this) authority to burn
-            BurnableERC20(msg.sender).burn(_amount);
+            IBurnableERC20(msg.sender).burn(_amount);
         }
     }
 

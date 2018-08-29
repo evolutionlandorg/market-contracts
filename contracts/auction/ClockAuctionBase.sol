@@ -3,8 +3,8 @@ pragma solidity ^0.4.23;
 import "openzeppelin-solidity/contracts/token/ERC721/ERC721Basic.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
-import "./ITokenVendor.sol";
-import "./ILandData.sol";
+import "./interfaces/ITokenVendor.sol";
+import "./interfaces/ILandData.sol";
 import "./RewardBox.sol";
 
 

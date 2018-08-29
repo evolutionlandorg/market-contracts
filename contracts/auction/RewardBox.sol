@@ -1,6 +1,6 @@
 pragma solidity ^0.4.23;
 
-import "./ILandData.sol";
+import "./interfaces/ILandData.sol";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 
