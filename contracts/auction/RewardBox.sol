@@ -53,6 +53,10 @@ contract RewardBox is Ownable {
         emit Unbox(_tokenId, resourcesReward[0], resourcesReward[1], resourcesReward[2],
             resourcesReward[3], resourcesReward[4]);
 
+        // after unboxing, set hasBox(tokenId) to false
+        // to restrict unboxing
+        landData.modifyAttributes(_tokenId, 80, 95, 0);
+
         return (resourcesReward[0], resourcesReward[1], resourcesReward[2],
         resourcesReward[3], resourcesReward[4]);
     }
