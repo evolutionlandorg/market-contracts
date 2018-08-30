@@ -23,7 +23,7 @@ contract UnIssuedTokenHolder {
         return originToken;
     }
 
-    function smartToken() public returns (address) {
+    function smartToken() public view returns (address) {
         return smartToken;
     }
 

@@ -1,11 +1,18 @@
 pragma solidity ^0.4.23;
 
-import "./AuctionRelated.sol";
-import "evolutionlandcommon/contracts/interfaces/ISettingsRegistry.sol";
-import 'evolutionlandcommon/contracts/SettingIds.sol';
 
-contract ClockAuction is AuctionRelated, SettingIds {
-    ISettingsRegistry registry;
+import "./ClockAuctionBase.sol";
+
+contract ClockAuction is ClockAuctionBase {
+
+    modifier isHuman() {
+        require (msg.sender == tx.origin, "robot is not permitted");
+        _;
+    }
+
+    ///////////////////////
+    // Constructor
+    ///////////////////////
 
     /// @dev Constructor creates a reference to the NFT ownership contract
     ///  and verifies the owner cut is in the valid range.
@@ -22,19 +29,15 @@ contract ClockAuction is AuctionRelated, SettingIds {
         ISettingsRegistry _registry
         )
     public {
-        // set ownerCut to 4%
-        ownerCut = 400;
-
         ERC721Basic candidateContract = ERC721Basic(_nftAddress);
         // InterfaceId_ERC721 = 0x80ac58cd;
         require(candidateContract.supportsInterface(0x80ac58cd));
+
         nonFungibleContract = candidateContract;
+
         _setRING(_RING);
         _setTokenVendor(_tokenVendor);
-        // bidWatingTime is 30 minutes
-        _setBidWaitingTime(30);
-        // claimBounty of ring is 20 ring
-        _setClaimBounty(_RING, 20000000000000000000);
+
         _setPangu(_pangu);
 
         registry = _registry;
@@ -46,28 +49,74 @@ contract ClockAuction is AuctionRelated, SettingIds {
         rewardBox = new RewardBox(_registry, resourcesPool);
     }
 
-    modifier isHuman() {
-        require (msg.sender == tx.origin, "robot is not permitted");
-        _;
+    ///////////////////////
+    // Auction Create and Cancel
+    ///////////////////////
+
+    function createAuction(
+        uint256 _tokenId,
+        uint256 _startingPriceInToken,
+        uint256 _endingPriceInToken,
+        uint256 _duration,
+        address _token)
+    public {
+        require(msg.sender == pangu, "only pangu can call this");
+        // pangu can only set its own as seller
+        _createAuction(msg.sender, _tokenId, _startingPriceInToken, _endingPriceInToken, _duration, msg.sender, _token);
     }
 
-    /// @notice This method can be used by the owner to extract mistakenly
-    ///  sent tokens to this contract.
-    /// @param _token The address of the token contract that you want to recover
-    ///  set to 0 in case you want to extract ether.
-    function claimTokens(address _token) public onlyOwner {
-        if (_token == 0x0) {
-            owner.transfer(address(this).balance);
-            return;
+    /// @dev Cancels an auction that hasn't been won yet.
+    ///  Returns the NFT to original owner.
+    /// @notice This is a state-modifying function that can
+    ///  be called while the contract is paused.
+    /// @param _tokenId - ID of token on auction
+    function cancelAuction(uint256 _tokenId)
+    public
+    {
+        Auction storage auction = tokenIdToAuction[_tokenId];
+        require(_isOnAuction(auction));
+
+        address seller = auction.seller;
+        require((msg.sender == seller && !paused) || msg.sender == owner);
+        
+        // once someone has bidden for this auction, no one has the right to cancel it.
+        require(auction.lastBidder == 0x0);
+        _cancelAuction(_tokenId,seller);
+    }
+
+    //@dev only NFT contract can invoke this
+    //@param _from - owner of _tokenId
+    function receiveApproval(
+        address _from,
+        uint256 _tokenId,
+        bytes //_extraData
+    )
+    public
+    whenNotPaused
+    {
+        if (msg.sender == address(nonFungibleContract)) {
+            uint256 startingPriceInRING;
+            uint256 endingPriceInRING;
+            uint256 duration;
+            address seller;
+
+            assembly {
+                let ptr := mload(0x40)
+                calldatacopy(ptr, 0, calldatasize)
+                startingPriceInRING := mload(add(ptr,132))
+                endingPriceInRING := mload(add(ptr,164))
+                duration := mload(add(ptr,196))
+                seller := mload(add(ptr,228))
+            }
+            //TODO: add parameter _token
+            _createAuction(_from, _tokenId, startingPriceInRING, endingPriceInRING, duration, seller, address(RING));
         }
-        ERC20 token = ERC20(_token);
-        uint balance = token.balanceOf(address(this));
-        token.transfer(owner, balance);
 
-        emit ClaimedTokens(_token, owner, balance);
     }
 
-
+    ///////////////////////
+    // Bid With Auction
+    ///////////////////////
 
     /// @dev Bids on an open auction, completing the auction and transferring
     ///  ownership of the NFT if enough Ether is supplied.
@@ -121,7 +170,10 @@ contract ClockAuction is AuctionRelated, SettingIds {
         // if someone has already bidden for it before, priceInRING is last bidder's offer
         uint priceInRING = _currentPriceInToken(auction);
 
-        uint bidMoment = _buyProcess(_buyer, auction, priceInRING, _referer);
+        IClaimBountyCalculator claimBountyCalculator = IClaimBountyCalculator(registry.addressOf(SettingIds.CONTRACT_AUCTION_CLAIM_BOUNTY));
+        uint claimBounty = claimBountyCalculator.tokenAmountForBounty(auction.token);
+
+        uint bidMoment = _buyProcess(_buyer, auction, priceInRING, _referer, claimBounty);
 
         // Tell the world!
         // 0x0 refers to ETH
@@ -129,8 +181,6 @@ contract ClockAuction is AuctionRelated, SettingIds {
 
         return priceInRING;
     }
-
-
 
     // @dev bid with RING. Computes the price and transfers winnings.
     function _bidWithToken(address _from, uint256 _tokenId, uint256 _valueInToken, address _referer) internal returns (uint256){
@@ -149,15 +199,16 @@ contract ClockAuction is AuctionRelated, SettingIds {
             ERC20(auction.token).transfer(_from, refund);
         }
 
-        uint bidMoment = _buyProcess(_from, auction, priceInToken, _referer);
+        IClaimBountyCalculator claimBountyCalculator = IClaimBountyCalculator(registry.addressOf(SettingIds.CONTRACT_AUCTION_CLAIM_BOUNTY));
+        uint claimBounty = claimBountyCalculator.tokenAmountForBounty(auction.token);
+
+        uint bidMoment = _buyProcess(_from, auction, priceInToken, _referer, claimBounty);
 
         // Tell the world!
         emit NewBid(_tokenId, _from, _referer, priceInToken, auction.token, bidMoment);
 
         return priceInToken;
     }
-
-
 
     // here to handle bid for LAND(NFT) using RING
     // @dev bidder must use RING.transfer(address(this), _valueInRING, bytes32(_tokenId)
@@ -193,7 +244,7 @@ contract ClockAuction is AuctionRelated, SettingIds {
         // at least bidWaitingTime after last bidder's bid moment,
         // and no one else has bidden during this bidWaitingTime,
         // then any one can claim this token(land) for lastBidder.
-        require(now >= auction.lastBidStartAt + bidWaitingTime,
+        require(now >= auction.lastBidStartAt + registry.uintOf(SettingIds.UINT_AUCTION_BID_WAITING_TIME),
             "this auction has not finished yet, try again later");
 
         // if this land asset has reward box on it,
@@ -208,14 +259,18 @@ contract ClockAuction is AuctionRelated, SettingIds {
         uint lastRecord = auction.lastRecord;
         address lastReferer = auction.lastReferer;
 
-        uint claimBounty = token2claimBounty[auction.token];
+        uint auctionCut = registry.uintOf(SettingIds.UINT_AUCTION_CUT);
+        IClaimBountyCalculator claimBountyCalculator = IClaimBountyCalculator(registry.addressOf(SettingIds.CONTRACT_AUCTION_CLAIM_BOUNTY));
+
+        uint claimBounty = claimBountyCalculator.tokenAmountForBounty(auction.token);
         // if Auction is sucessful, refererBounty is taken on by evolutionland
-        uint refererBounty = _computeCut(lastRecord.sub(claimBounty) / 11);
+        uint refererBounty = computeCut(lastRecord.sub(claimBounty) / 11, auctionCut);
 
         //prevent re-entry attack
         _removeAuction(_tokenId);
 
-        _transfer(lastBidder, _tokenId);
+        nonFungibleContract.safeTransferFrom(this, lastBidder, _tokenId);
+
         // if there is claimBounty, then reward who invoke this function
         if (claimBounty > 0) {
             require(token.transfer(msg.sender, claimBounty));
@@ -227,98 +282,176 @@ contract ClockAuction is AuctionRelated, SettingIds {
 
 
     // TODO: add _token to compatible backwards with ring and eth
-    function _buyProcess(address _buyer, Auction storage _auction, uint _priceInToken, address _referer)
+    function _buyProcess(address _buyer, Auction storage _auction, uint _priceInToken, address _referer, uint _claimBounty)
     internal
     canBeStoredWith128Bits(_priceInToken)
     returns (uint256){
+        uint priceWithoutBounty = _priceInToken.sub(_claimBounty);
 
-        uint claimBounty = token2claimBounty[_auction.token];
-        uint priceWithoutBounty = _priceInToken.sub(claimBounty);
-
-        // last bidder's info
-        address lastBidder;
-        // last bidder's price
-        uint lastRecord;
-        // last bidder's referer
-        address lastReferer;
-
-        lastBidder = _auction.lastBidder;
-        lastRecord = uint256(_auction.lastRecord);
-        lastReferer = _auction.lastReferer;
-
-        // modify bid-related member variables
-
-        _auction.lastBidder = _buyer;
-        _auction.lastRecord = uint128(_priceInToken);
-        _auction.lastBidStartAt = now;
-        _auction.lastReferer = _referer;
-
-        // Grab a reference to the seller before the auction struct
-        // gets deleted.
-        address seller = _auction.seller;
+        uint auctionCut = registry.uintOf(SettingIds.UINT_AUCTION_CUT);
 
         // the first bid
-        if (lastBidder == 0x0 && _priceInToken > 0) {
+        if (_auction.lastBidder == 0x0 && _priceInToken > 0) {
             //  Calculate the auctioneer's cut.
-            // (NOTE: _computeCut() is guaranteed to return a
+            // (NOTE: computeCut() is guaranteed to return a
             //  value <= price, so this subtraction can't go negative.)
             // TODO: token to the seller
             // we dont touch claimBounty
-            uint256 sellerProceedsInToken = priceWithoutBounty - _computeCut(priceWithoutBounty);
+            uint256 sellerProceedsInToken = priceWithoutBounty - computeCut(priceWithoutBounty, auctionCut);
+
             // transfer to the seller
-            ERC20(_auction.token).transfer(seller, sellerProceedsInToken);
+            ERC20(_auction.token).transfer(_auction.seller, sellerProceedsInToken);
         }
 
         // TODO: the math calculation needs further check
         //  not the first bid
-        if (lastRecord > 0 && lastBidder != 0x0) {
+        if (_auction.lastRecord > 0 && _auction.lastBidder != 0x0) {
             // TODO: repair bug of first bid's time limitation
             // if this the first bid, there is no time limitation
-            require(now <= _auction.lastBidStartAt + bidWaitingTime, "It's too late.");
+            require(now <= _auction.lastBidStartAt + registry.uintOf(SettingIds.UINT_AUCTION_BID_WAITING_TIME), "It's too late.");
 
             // _priceInToken that is larger than lastRecord
             // was assured in _currentPriceInRING(_auction)
             // here double check
             // 1.1*price + bounty - (price + bounty) = 0.1price
             // we dont touch claimBounty
-            uint extraForEach = (_priceInToken.sub(lastRecord)) / 2;
-            uint realReturn = extraForEach.sub(_computeCut(extraForEach));
+            uint extraForEach = (_priceInToken.sub(uint256(_auction.lastRecord))) / 2;
+            uint realReturn = extraForEach.sub(computeCut( extraForEach, auctionCut));
             if (_referer == 0x0) {
-                ERC20(_auction.token).transfer(seller, realReturn);
-                ERC20(_auction.token).transfer(lastBidder, (realReturn + lastRecord));
+                ERC20(_auction.token).transfer(_auction.seller, realReturn);
+                ERC20(_auction.token).transfer(_auction.lastBidder, (realReturn + uint256(_auction.lastRecord)));
             } else {
-                ERC20(_auction.token).transfer(seller, realReturn);
-                ERC20(_auction.token).transfer(lastBidder, ((9 * realReturn / 10) + lastRecord));
+                ERC20(_auction.token).transfer(_auction.seller, realReturn);
+                ERC20(_auction.token).transfer(_auction.lastBidder, ((9 * realReturn / 10) + uint256(_auction.lastRecord)));
                 ERC20(_auction.token).transfer(_referer, realReturn / 10);
             }
 
         }
 
+        // modify bid-related member variables
+        _auction.lastBidder = _buyer;
+        _auction.lastRecord = uint128(_priceInToken);
+        _auction.lastBidStartAt = now;
+        _auction.lastReferer = _referer;
+
         return _auction.lastBidStartAt;
     }
 
 
-    //@ param _waitingMinutes - waiting time (in minutes)
-    function setBidWaitingTime(uint _waitingMinutes) public onlyOwner {
-        _setBidWaitingTime(_waitingMinutes);
+    /// @notice This method can be used by the owner to extract mistakenly
+    ///  sent tokens to this contract.
+    /// @param _token The address of the token contract that you want to recover
+    ///  set to 0 in case you want to extract ether.
+    function claimTokens(address _token) public onlyOwner {
+        if (_token == 0x0) {
+            owner.transfer(address(this).balance);
+            return;
+        }
+        ERC20 token = ERC20(_token);
+        uint balance = token.balanceOf(address(this));
+        token.transfer(owner, balance);
+
+        emit ClaimedTokens(_token, owner, balance);
     }
 
-    function setClaimBounty(address _token, uint _claimBounty) public onlyOwner {
-        _setClaimBounty(_token, _claimBounty);
+        /// @dev Computes owner's cut of a sale.
+    /// @param _price - Sale price of NFT.
+    function computeCut(uint256 _price, uint256 _cut) public pure returns (uint256) {
+        // NOTE: We don't use SafeMath (or similar) in this function because
+        //  all of our entry functions carefully cap the maximum values for
+        //  currency (at 128-bits), and ownerCut <= 10000 (see the require()
+        //  statement in the ClockAuction constructor). The result of this
+        //  function is always guaranteed to be <= _price.
+        return _price * _cut / 10000;
+    }
+
+        /// @dev Returns auction info for an NFT on auction.
+    /// @param _tokenId - ID of NFT on auction.
+    function getAuction(uint256 _tokenId)
+    public
+    view
+    returns
+    (
+        address seller,
+        uint256 startingPrice,
+        uint256 endingPrice,
+        uint256 duration,
+        uint256 startedAt,
+        address token,
+        uint128 lastRecord,
+        address lastBidder,
+        uint256 lastBidStartAt,
+        address lastReferer
+    ) {
+        Auction storage auction = tokenIdToAuction[_tokenId];
+        require(_isOnAuction(auction));
+        return (
+        auction.seller,
+        auction.startingPriceInToken,
+        auction.endingPriceInToken,
+        auction.duration,
+        auction.startedAt,
+        auction.token,
+        auction.lastRecord,
+        auction.lastBidder,
+        auction.lastBidStartAt,
+        auction.lastReferer
+        );
+    }
+
+    /// @dev Returns the current price of an auction.
+    /// 
+    /// @param _tokenId - ID of the token price we are checking.
+    function getCurrentPriceInToken(uint256 _tokenId)
+    public
+    view
+    returns (uint256)
+    {
+        Auction storage auction = tokenIdToAuction[_tokenId];
+        require(_isOnAuction(auction));
+        return _currentPriceInToken(auction);
+    }
+
+    // to apply for the safeTransferFrom
+    function onERC721Received(
+        address, //_operator,
+        address, //_from,
+        uint256, // _tokenId,
+        bytes //_data
+    )
+    public
+    returns(bytes4) {
+        return bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"));
     }
 
     function setPangu(address _pangu) public onlyOwner {
         _setPangu(_pangu);
     }
 
-//    function bytesToUint256(bytes b) public pure returns (uint256) {
-//        bytes32 out;
-//
-//        for (uint i = 0; i < 32; i++) {
-//            out |= bytes32(b[i] & 0xFF) >> (i * 8);
-//        }
-//        return uint256(out);
-//    }
+    function setTokenVendor(address _tokenVendor) public onlyOwner {
+        _setTokenVendor(_tokenVendor);
+    }
 
+    function setRING(address _ring) public onlyOwner {
+        _setRING(_ring);
+    }
 
+    // get auction's price of last bidder offered
+    // @dev return price of _auction (in RING)
+    function getLastRecord(uint _tokenId) public view returns (uint256) {
+        return tokenIdToAuction[_tokenId].lastRecord;
+    }
+
+    function getLastBidder(uint _tokenId) public view returns (address) {
+        return tokenIdToAuction[_tokenId].lastBidder;
+    }
+
+    function getLastBidStartAt(uint _tokenId) public view returns (uint256) {
+        return tokenIdToAuction[_tokenId].lastBidStartAt;
+    }
+
+    // @dev if someone new wants to bid, the lowest price he/she need to afford
+    function computeNextBidRecord(uint _tokenId) public view returns (uint256) {
+        return _currentPriceInToken(tokenIdToAuction[_tokenId]);
+    }
 }

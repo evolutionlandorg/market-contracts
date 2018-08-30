@@ -1,18 +1,22 @@
 pragma solidity ^0.4.23;
 
+import "openzeppelin-solidity/contracts/lifecycle/Pausable.sol";
 import "openzeppelin-solidity/contracts/token/ERC721/ERC721Basic.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
-import "./RewardBox.sol";
 import "evolutionlandcommon/contracts/interfaces/ILandData.sol";
 import "evolutionlandcommon/contracts/interfaces/ITokenVendor.sol";
-
+import "evolutionlandcommon/contracts/interfaces/ISettingsRegistry.sol";
+import 'evolutionlandcommon/contracts/SettingIds.sol';
+import "./RewardBox.sol";
+import "./interfaces/IClaimBountyCalculator.sol";
 
 
 /// @title Auction Core
 /// @dev Contains models, variables, and internal methods for the auction.
-contract ClockAuctionBase {
+contract ClockAuctionBase is Pausable, SettingIds {
     using SafeMath for *;
+
     // Represents an auction on an NFT
     struct Auction {
         // Current owner of NFT
@@ -41,12 +45,10 @@ contract ClockAuctionBase {
         address lastReferer;
     }
 
+    ISettingsRegistry registry;
+
     // Reference to contract tracking NFT ownership
     ERC721Basic public nonFungibleContract;
-
-    // Cut owner takes on each auction, measured in basis points (1/100 of a percent).
-    // Values 0-10,000 map to 0%-100%
-    uint256 public ownerCut;
 
     // Map from token ID to their corresponding auction.
     mapping(uint256 => Auction) tokenIdToAuction;
@@ -63,17 +65,6 @@ contract ClockAuctionBase {
     // address of reward boxes
     RewardBox public rewardBox;
 
-    // necessary period of time from invoking bid action to successfully taking the land asset.
-    // if someone else bid the same auction with higher price and within bidWaitingTime, your bid failed.
-    uint public bidWaitingTime;
-
-    // if someone successfully invokes claimLandAsset,
-    // then he/she can get claimBounty as reward
-    //token address => claimBounty of certain token
-    //TODO: modify the type of claimBounty
-    mapping (address => uint) public token2claimBounty;
-
-
     event AuctionCreated(uint256 tokenId, uint256 startingPriceInToken, uint256 endingPriceInToken, uint256 duration, address token);
     event AuctionSuccessful(uint256 tokenId, uint256 totalPrice, address winner);
     event AuctionCancelled(uint256 tokenId);
@@ -82,7 +73,6 @@ contract ClockAuctionBase {
     event ClaimedTokens(address indexed token, address indexed owner, uint amount);
 
     // new bid event
-
     event NewBid(uint256 indexed tokenId, address lastBidder, address lastReferer, uint256 lastRecord, address tokenAddress, uint256 bidStartAt);
 
     // set claimBounty
@@ -103,29 +93,48 @@ contract ClockAuctionBase {
         _;
     }
 
-    /// @dev Returns true if the claimant owns the token.
-    /// @param _claimant - Address claiming to own the token.
-    /// @param _tokenId - ID of token whose ownership to verify.
-    function _owns(address _claimant, uint256 _tokenId) internal view returns (bool) {
-        return (nonFungibleContract.ownerOf(_tokenId) == _claimant);
-    }
+    /// @dev Creates and begins a new auction.
+    /// @param _tokenId - ID of token to auction, sender must be owner.
+    //  NOTE: change _startingPrice and _endingPrice in from wei to ring for user-friendly reason
+    /// @param _startingPriceInToken - Price of item (in token) at beginning of auction.
+    /// @param _endingPriceInToken - Price of item (in token) at end of auction.
+    /// @param _duration - Length of time to move between starting
+    ///  price and ending price (in seconds).
+    /// @param _seller - Seller, if not the message sender
+    function _createAuction(
+        address _from,
+        uint256 _tokenId,
+        uint256 _startingPriceInToken,
+        uint256 _endingPriceInToken,
+        uint256 _duration,
+        address _seller,
+        address _token
+    )
+    internal
+    whenNotPaused
+    canBeStoredWith128Bits(_startingPriceInToken)
+    canBeStoredWith128Bits(_endingPriceInToken)
+    canBeStoredWith64Bits(_duration)
+    {
+        require((nonFungibleContract.ownerOf(_tokenId) == _from), "you are not the owner, dont do this.");
 
-    /// @dev Escrows the NFT, assigning ownership to this contract.
-    /// Throws if the escrow fails.
-    /// @param _owner - Current owner address of token to escrow.
-    /// @param _tokenId - ID of token whose approval to verify.
-    function _escrow(address _owner, uint256 _tokenId) internal {
-        // it will throw if transfer fails
-        nonFungibleContract.safeTransferFrom(_owner, this, _tokenId);
-    }
+        // escrow
+        nonFungibleContract.safeTransferFrom(_from, this, _tokenId);
 
-    /// @dev Transfers an NFT owned by this contract to another address.
-    /// Returns true if the transfer succeeds.
-    /// @param _receiver - Address to transfer NFT to.
-    /// @param _tokenId - ID of token to transfer.
-    function _transfer(address _receiver, uint256 _tokenId) internal {
-        // it will throw if transfer fails
-        nonFungibleContract.safeTransferFrom(this, _receiver, _tokenId);
+        Auction memory auction = Auction(
+            _seller,
+            uint128(_startingPriceInToken),
+            uint128(_endingPriceInToken),
+            uint64(_duration),
+            uint64(now),
+            //TODO: add auction.token
+            _token,
+            // which refer to lastRecord, lastBidder, lastBidStartAt,lastReferer
+            // all set to zero when initialized
+            0,0x0,0,0x0
+        );
+        
+        _addAuction(_tokenId, auction);
     }
 
     /// @dev Adds an auction to the list of open auctions. Also fires the
@@ -151,7 +160,7 @@ contract ClockAuctionBase {
     /// @dev Cancels an auction unconditionally.
     function _cancelAuction(uint256 _tokenId, address _seller) internal {
         _removeAuction(_tokenId);
-        _transfer(_seller, _tokenId);
+        nonFungibleContract.safeTransferFrom(this, _seller, _tokenId);
         emit AuctionCancelled(_tokenId);
     }
 
@@ -186,8 +195,11 @@ contract ClockAuctionBase {
     returns (uint256)
     {
         uint256 secondsPassed = 0;
+
         // get bounty of certain token
-        uint256 claimBounty = token2claimBounty[_auction.token];
+        IClaimBountyCalculator claimBountyCalculator = IClaimBountyCalculator(registry.addressOf(SettingIds.CONTRACT_AUCTION_CLAIM_BOUNTY));
+        
+        uint256 claimBounty = claimBountyCalculator.tokenAmountForBounty(_auction.token);
 
         // A bit of insurance against negative values (or wraparound).
         // Probably not necessary (since Ethereum guarnatees that the
@@ -227,7 +239,7 @@ contract ClockAuctionBase {
         uint256 _claimBounty
     )
     internal
-    view
+    pure
     returns (uint256)
     {
         // NOTE: We don't use SafeMath (or similar) in this function because
@@ -257,35 +269,12 @@ contract ClockAuctionBase {
         }
     }
 
-    /// @dev Computes owner's cut of a sale.
-    /// @param _price - Sale price of NFT.
-    function _computeCut(uint256 _price) internal view returns (uint256) {
-        // NOTE: We don't use SafeMath (or similar) in this function because
-        //  all of our entry functions carefully cap the maximum values for
-        //  currency (at 128-bits), and ownerCut <= 10000 (see the require()
-        //  statement in the ClockAuction constructor). The result of this
-        //  function is always guaranteed to be <= _price.
-        return _price * ownerCut / 10000;
-    }
-
-
     function _setTokenVendor(address _tokenVendor) internal {
         tokenVendor = ITokenVendor(_tokenVendor);
     }
 
     function _setRING(address _ring) internal {
         RING = ERC20(_ring);
-    }
-
-
-    function _setBidWaitingTime(uint _waitingMinutes) internal {
-        bidWaitingTime = _waitingMinutes * 1 minutes;
-    }
-
-    //TODO:
-    function _setClaimBounty(address _token, uint _claimBounty) internal {
-        token2claimBounty[_token] = _claimBounty;
-        emit ClaimBounty(_token, _claimBounty);
     }
 
     function _setPangu(address _pangu) internal {

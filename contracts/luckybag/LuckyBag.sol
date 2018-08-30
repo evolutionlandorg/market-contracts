@@ -26,7 +26,7 @@ contract LuckyBag is Pausable {
         silverBagAmountForSale = _silverBagAmountForSale;
     }
 
-    function buyBags(address _buyer, uint256 _goldBagAmount, uint256 _silverBagAmount) payable whenNotPaused {
+    function buyBags(address _buyer, uint256 _goldBagAmount, uint256 _silverBagAmount) payable public whenNotPaused {
         require(_buyer != address(0));
         uint256 charge = _goldBagAmount.mul(goldBagPrice).add(_silverBagAmount.mul(silverBagPrice));
         require(msg.value >= charge, "No enough ether for buying lucky bags.");
@@ -54,7 +54,7 @@ contract LuckyBag is Pausable {
         }
     }
 
-    function buyBags(uint256 _goldBagAmount, uint256 _silverBagAmount) payable whenNotPaused {
+    function buyBags(uint256 _goldBagAmount, uint256 _silverBagAmount) payable public whenNotPaused {
         buyBags(msg.sender, _goldBagAmount, _silverBagAmount);
     }
 
