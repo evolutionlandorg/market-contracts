@@ -2,7 +2,7 @@ pragma solidity ^0.4.23;
 
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "./interfaces/ILandData.sol";
+import "evolutionlandcommon/contracts/interfaces/ILandData.sol";
 
 contract RewardBox is Ownable {
     using SafeMath for *;
