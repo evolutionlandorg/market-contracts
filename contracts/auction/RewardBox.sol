@@ -117,11 +117,11 @@ contract RewardBox is Ownable {
         resourcePool[_keyNumber] = _resources;
     }
 
-    function setResourcePool(uint _keyNumber, uint _resources) public onlyAdmin {
+    function setResourcePool(uint _keyNumber, uint _resources) public onlyOwner {
         _setResourcePool(_keyNumber, _resources);
     }
 
-    function setTotalBoxNotOpened(uint _totalBox) public onlyAdmin {
+    function setTotalBoxNotOpened(uint _totalBox) public onlyOwner {
         // after last round reward ended
         require(totalBoxNotOpened == 0);
         totalBoxNotOpened = _totalBox;
