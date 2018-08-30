@@ -196,9 +196,6 @@ contract ClockAuction is AuctionRelated {
         // unboxing it will raise resource limit to this land
         if(landData.hasBox(_tokenId)) {
             rewardBox.unbox(_tokenId);
-            // after unboxing, set hasBox(tokenId) to false
-            // to restrict unboxing
-            landData.modifyAttributes(_tokenId, 80, 95, 0);
         }
 
         ERC20 token = ERC20(auction.token);
