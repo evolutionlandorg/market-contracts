@@ -1,8 +1,11 @@
 pragma solidity ^0.4.23;
 
 import "./AuctionRelated.sol";
+import "evolutionlandcommon/contracts/interfaces/ISettingsRegistry.sol";
+import 'evolutionlandcommon/contracts/SettingIds.sol';
 
-contract ClockAuction is AuctionRelated {
+contract ClockAuction is AuctionRelated, SettingIds {
+    ISettingsRegistry registry;
 
     /// @dev Constructor creates a reference to the NFT ownership contract
     ///  and verifies the owner cut is in the valid range.
@@ -16,7 +19,7 @@ contract ClockAuction is AuctionRelated {
         address _RING,
         address _tokenVendor,
         address _pangu,
-        address _landData
+        ISettingsRegistry _registry
         )
     public {
         // set ownerCut to 4%
@@ -33,13 +36,14 @@ contract ClockAuction is AuctionRelated {
         // claimBounty of ring is 20 ring
         _setClaimBounty(_RING, 20000000000000000000);
         _setPangu(_pangu);
-        landData = ILandData(_landData);
+
+        registry = _registry;
         // convert the first on into uint to avoid error
         // because the default type is uint8[]
         // members in resourcesPool refer to
         // goldPool, woodPool, waterPool, firePool, soilPool respectively
         uint[5] memory resourcesPool = [uint(10439), 419, 5258, 12200, 10826];
-        rewardBox = new RewardBox(_landData, resourcesPool);
+        rewardBox = new RewardBox(_registry, resourcesPool);
     }
 
     modifier isHuman() {
@@ -194,6 +198,7 @@ contract ClockAuction is AuctionRelated {
 
         // if this land asset has reward box on it,
         // unboxing it will raise resource limit to this land
+        ILandData landData = ILandData(registry.addressOf(SettingIds.CONTRACT_LAND_DATA));
         if(landData.hasBox(_tokenId)) {
             rewardBox.unbox(_tokenId);
         }

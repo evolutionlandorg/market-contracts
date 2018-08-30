@@ -3,11 +3,13 @@ pragma solidity ^0.4.23;
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "evolutionlandcommon/contracts/interfaces/ILandData.sol";
+import "evolutionlandcommon/contracts/interfaces/ISettingsRegistry.sol";
+import 'evolutionlandcommon/contracts/SettingIds.sol';
 
-contract RewardBox is Ownable {
+contract RewardBox is Ownable, SettingIds {
     using SafeMath for *;
 
-    ILandData public landData;
+    ISettingsRegistry public registry;
 
     // the key of resourcePool are 0,1,2,3,4
     // respectively refer to gold,wood,water,fire,soil
@@ -20,8 +22,9 @@ contract RewardBox is Ownable {
     event Unbox(uint indexed tokenId, uint goldRate, uint woodRate, uint waterRate, uint fireRate, uint soilRate);
 
     // this need to be created in ClockAuction cotnract
-    constructor(address _landData, uint256[5] _resources) public {
-        landData = ILandData(_landData);
+    constructor(ISettingsRegistry _registry, uint256[5] _resources) public {
+        registry = _registry;
+
         totalBoxNotOpened = 176;
         for(uint i = 0; i < 5; i++) {
             _setResourcePool(i, _resources[i]);
@@ -34,6 +37,7 @@ contract RewardBox is Ownable {
     public
     onlyOwner
     returns (uint, uint, uint, uint, uint){
+        ILandData landData = ILandData(registry.addressOf(SettingIds.CONTRACT_LAND_DATA));
 
         //resourcesExist[0, 4] is gold,wood,water,fire,soil resources rate's limit
         // resourcesExist[5] is flag, and not used

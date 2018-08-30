@@ -63,9 +63,6 @@ contract ClockAuctionBase {
     // address of reward boxes
     RewardBox public rewardBox;
 
-    // address of LandData
-    ILandData public landData;
-
     // necessary period of time from invoking bid action to successfully taking the land asset.
     // if someone else bid the same auction with higher price and within bidWaitingTime, your bid failed.
     uint public bidWaitingTime;

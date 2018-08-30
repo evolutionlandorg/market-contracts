@@ -7,6 +7,37 @@ import "./ClockAuctionBase.sol";
 /// @title Clock auction for non-fungible tokens.
 contract AuctionRelated is Pausable, ClockAuctionBase {
 
+    function createAuction(
+        uint256 _tokenId,
+        uint256 _startingPriceInToken,
+        uint256 _endingPriceInToken,
+        uint256 _duration,
+        address _token)
+    public {
+        require(msg.sender == pangu, "only pangu can call this");
+        // pangu can only set its own as seller
+        _createAuction(msg.sender, _tokenId, _startingPriceInToken, _endingPriceInToken, _duration, msg.sender, _token);
+    }
+
+    /// @dev Cancels an auction that hasn't been won yet.
+    ///  Returns the NFT to original owner.
+    /// @notice This is a state-modifying function that can
+    ///  be called while the contract is paused.
+    /// @param _tokenId - ID of token on auction
+    function cancelAuction(uint256 _tokenId)
+    public
+    {
+        Auction storage auction = tokenIdToAuction[_tokenId];
+        require(_isOnAuction(auction));
+
+        address seller = auction.seller;
+        require((msg.sender == seller && !paused) || msg.sender == owner);
+        
+        // once someone has bidden for this auction, no one has the right to cancel it.
+        require(auction.lastBidder == 0x0);
+        _cancelAuction(_tokenId,seller);
+    }
+
 
     /// @dev Creates and begins a new auction.
     /// @param _tokenId - ID of token to auction, sender must be owner.
@@ -46,42 +77,8 @@ contract AuctionRelated is Pausable, ClockAuctionBase {
             // all set to zero when initialized
             0,0x0,0,0x0
         );
+        
         _addAuction(_tokenId, auction);
-    }
-
-
-
-    /// @dev Cancels an auction that hasn't been won yet.
-    ///  Returns the NFT to original owner.
-    /// @notice This is a state-modifying function that can
-    ///  be called while the contract is paused.
-    /// @param _tokenId - ID of token on auction
-    function cancelAuction(uint256 _tokenId)
-    public
-    {
-        Auction storage auction = tokenIdToAuction[_tokenId];
-        require(_isOnAuction(auction));
-        address seller = auction.seller;
-        require(msg.sender == seller || msg.sender == owner);
-        // once someone has bidden for this auction, no one has the right to cancel it.
-        require(auction.lastBidder == 0x0);
-        _cancelAuction(_tokenId,seller);
-    }
-
-    /// @dev Cancels an auction when the contract is paused.
-    ///  Only the owner may do this, and NFTs are returned to
-    ///  the seller. This should only be used in emergencies.
-    /// @param _tokenId - ID of the NFT on auction to cancel.
-    function cancelAuctionWhenPaused(uint256 _tokenId)
-    whenPaused
-    onlyOwner
-    public
-    {
-        Auction storage auction = tokenIdToAuction[_tokenId];
-        require(_isOnAuction(auction));
-        // once someone has bidden for this auction, no one has the right to cancel it.
-        require(auction.lastBidder == 0x0);
-        _cancelAuction(_tokenId, auction.seller);
     }
 
     /// @dev Returns auction info for an NFT on auction.
@@ -133,10 +130,10 @@ contract AuctionRelated is Pausable, ClockAuctionBase {
 
     // to apply for the safeTransferFrom
     function onERC721Received(
-        address _operator,
-        address _from,
-        uint256 _tokenId,
-        bytes _data
+        address, //_operator,
+        address, //_from,
+        uint256, // _tokenId,
+        bytes //_data
     )
     public
     returns(bytes4) {
@@ -181,47 +178,23 @@ contract AuctionRelated is Pausable, ClockAuctionBase {
 
     }
 
-    //TODO: add createAuction for pangu
-    function createAuction(
-        uint256 _tokenId,
-        uint256 _startingPriceInToken,
-        uint256 _endingPriceInToken,
-        uint256 _duration,
-        address _seller,
-        address _token)
-    public {
-        require(msg.sender == pangu, "only pangu can call this");
-        // pangu can only set its own as seller
-        _createAuction(msg.sender, _tokenId, _startingPriceInToken, _endingPriceInToken, _duration, msg.sender, _token);
-    }
-
     // get auction's price of last bidder offered
     // @dev return price of _auction (in RING)
-    function getLastRecord(uint _tokenId) public returns (uint256) {
-        // Get a reference to the auction struct
-        Auction storage auction = tokenIdToAuction[_tokenId];
-        return auction.lastRecord;
+    function getLastRecord(uint _tokenId) public view returns (uint256) {
+        return tokenIdToAuction[_tokenId].lastRecord;
     }
 
     function getLastBidder(uint _tokenId) public view returns (address) {
-        // Get a reference to the auction struct
-        Auction storage auction = tokenIdToAuction[_tokenId];
-        return auction.lastBidder;
+        return tokenIdToAuction[_tokenId].lastBidder;
     }
 
     function getLastBidStartAt(uint _tokenId) public view returns (uint256) {
-        // Get a reference to the auction struct
-        Auction storage auction = tokenIdToAuction[_tokenId];
-        return auction.lastBidStartAt;
+        return tokenIdToAuction[_tokenId].lastBidStartAt;
     }
 
     // @dev if someone new wants to bid, the lowest price he/she need to afford
-    function computeNextBidRecord(uint _tokenId) public returns (uint256) {
-        Auction storage auction = tokenIdToAuction[_tokenId];
-        return _currentPriceInToken(auction);
+    function computeNextBidRecord(uint _tokenId) public view returns (uint256) {
+        return _currentPriceInToken(tokenIdToAuction[_tokenId]);
     }
-
-
-
 
 }
