@@ -45,11 +45,17 @@ contract RewardBox is Ownable {
         (resourcesReward[0], resourcesReward[1],
         resourcesReward[2], resourcesReward[3], resourcesReward[4]) = _computeReward();
 
-        for(uint i = 0; i < 5; i++) {
-            // TODO: need add reward box to landData's admin roles;
-            landData.modifyAttributes(_tokenId, 16*i, 15+16*i, resourcesReward[i] + resourcesExist[i]);
-        }
 
+        // TODO: need add reward box to landData's admin roles;
+        landData.batchModifyResources(_tokenId,
+            resourcesReward[0] + resourcesExist[0],
+            resourcesReward[1] + resourcesExist[1],
+            resourcesReward[2] + resourcesExist[2],
+            resourcesReward[3] + resourcesExist[3],
+            resourcesReward[4] + resourcesExist[4]
+        );
+
+        // only record increment of resources
         emit Unbox(_tokenId, resourcesReward[0], resourcesReward[1], resourcesReward[2],
             resourcesReward[3], resourcesReward[4]);
 
