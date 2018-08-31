@@ -15,6 +15,12 @@ contract LuckyBag is Pausable {
 
     address public wallet;
 
+    mapping (address => uint256) goldSalesRecord;
+    mapping (address => uint256) silverSalesRecord;
+
+    uint256 public goldSaleLimit;
+    uint256 public silverSaleLimit;
+
     constructor(address _wallet, uint256 _goldBagAmountForSale, uint256 _silverBagAmountForSale) public
     {
         require(_wallet != address(0), "need a good wallet to store fund");
@@ -24,10 +30,16 @@ contract LuckyBag is Pausable {
         wallet = _wallet;
         goldBagAmountForSale = _goldBagAmountForSale;
         silverBagAmountForSale = _silverBagAmountForSale;
+
+        goldSaleLimit = 10;
+        silverSaleLimit = 100;
     }
 
     function buyBags(address _buyer, uint256 _goldBagAmount, uint256 _silverBagAmount) payable public whenNotPaused {
         require(_buyer != address(0));
+        require(goldSalesRecord[_buyer] + _goldBagAmount <= goldSaleLimit);
+        require(silverSalesRecord[_buyer] + _silverBagAmount <= silverSaleLimit);
+
         uint256 charge = _goldBagAmount.mul(goldBagPrice).add(_silverBagAmount.mul(silverBagPrice));
         require(msg.value >= charge, "No enough ether for buying lucky bags.");
         require(_goldBagAmount > 0 || _silverBagAmount > 0);
@@ -35,12 +47,14 @@ contract LuckyBag is Pausable {
         if (_goldBagAmount > 0)
         {
             goldBagAmountForSale = goldBagAmountForSale.sub(_goldBagAmount);
+            goldSalesRecord[_buyer] += _goldBagAmount;
             emit GoldBagSale(_buyer, _goldBagAmount, goldBagPrice);
         }
 
         if (_silverBagAmount > 0)
         {
             silverBagAmountForSale = silverBagAmountForSale.sub(_silverBagAmount);
+            silverSalesRecord[_buyer] += _silverBagAmount;
             emit SilverBagSale(_buyer, _silverBagAmount, silverBagPrice);
         }
 
@@ -58,14 +72,16 @@ contract LuckyBag is Pausable {
         buyBags(msg.sender, _goldBagAmount, _silverBagAmount);
     }
 
-    function updateGoldBagAmountAndPrice(uint256 _goldBagAmountForSale, uint256 _goldBagPrice) public onlyOwner {
+    function updateGoldBagAmountAndPrice(uint256 _goldBagAmountForSale, uint256 _goldBagPrice, uint256 _goldLimit) public onlyOwner {
         goldBagAmountForSale = _goldBagAmountForSale;
         goldBagPrice = _goldBagPrice;
+        goldSaleLimit = _goldLimit;
     }
 
-    function updateSilverBagAmountAndPrice(uint256 _silverBagAmountForSale, uint256 _silverBagPrice) public onlyOwner {
+    function updateSilverBagAmountAndPrice(uint256 _silverBagAmountForSale, uint256 _silverBagPrice, uint256 _silverLimit) public onlyOwner {
         silverBagAmountForSale = _silverBagAmountForSale;
         silverBagPrice = _silverBagPrice;
+        silverSaleLimit = _silverLimit;
     }
 
 
