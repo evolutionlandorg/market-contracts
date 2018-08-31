@@ -274,6 +274,9 @@ contract ClockAuction is ClockAuctionBase {
         // if there is claimBounty, then reward who invoke this function
         if (claimBounty > 0) {
             require(token.transfer(msg.sender, claimBounty));
+        }
+
+        if (lastReferer != 0x0) {
             require(token.transfer(lastReferer, refererBounty));
         }
 
@@ -317,13 +320,13 @@ contract ClockAuction is ClockAuctionBase {
             // we dont touch claimBounty
             uint extraForEach = (_priceInToken.sub(uint256(_auction.lastRecord))) / 2;
             uint realReturn = extraForEach.sub(computeCut( extraForEach, auctionCut));
-            if (_referer == 0x0) {
+            if (_auction.lastReferer == 0x0) {
                 ERC20(_auction.token).transfer(_auction.seller, realReturn);
                 ERC20(_auction.token).transfer(_auction.lastBidder, (realReturn + uint256(_auction.lastRecord)));
             } else {
                 ERC20(_auction.token).transfer(_auction.seller, realReturn);
                 ERC20(_auction.token).transfer(_auction.lastBidder, ((9 * realReturn / 10) + uint256(_auction.lastRecord)));
-                ERC20(_auction.token).transfer(_referer, realReturn / 10);
+                ERC20(_auction.token).transfer(_auction.lastReferer, realReturn / 10);
             }
 
         }
