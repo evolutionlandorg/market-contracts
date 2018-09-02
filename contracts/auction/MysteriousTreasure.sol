@@ -4,9 +4,9 @@ import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "evolutionlandcommon/contracts/interfaces/ILandData.sol";
 import "evolutionlandcommon/contracts/interfaces/ISettingsRegistry.sol";
-import 'evolutionlandcommon/contracts/SettingIds.sol';
+import "./AuctionSettingIds.sol";
 
-contract RewardBox is Ownable, SettingIds {
+contract MysteriousTreasure is Ownable, AuctionSettingIds {
     using SafeMath for *;
 
     ISettingsRegistry public registry;
@@ -36,8 +36,11 @@ contract RewardBox is Ownable, SettingIds {
     function unbox(uint256 _tokenId)
     public
     onlyOwner
-    returns (uint, uint, uint, uint, uint){
+    returns (uint, uint, uint, uint, uint) {
         ILandData landData = ILandData(registry.addressOf(SettingIds.CONTRACT_LAND_DATA));
+        if(! landData.hasBox(_tokenId) ) {
+            return (0,0,0,0,0);
+        }
 
         //resourcesExist[0, 4] is gold,wood,water,fire,soil resources rate's limit
         // resourcesExist[5] is flag, and not used
@@ -67,8 +70,7 @@ contract RewardBox is Ownable, SettingIds {
         // to restrict unboxing
         landData.modifyAttributes(_tokenId, 80, 95, 0);
 
-        return (resourcesReward[0], resourcesReward[1], resourcesReward[2],
-        resourcesReward[3], resourcesReward[4]);
+        return (resourcesReward[0], resourcesReward[1], resourcesReward[2], resourcesReward[3], resourcesReward[4]);
     }
 
     // rewards ranges from [0, 2 * average_of_resourcePool_left]
@@ -76,9 +78,12 @@ contract RewardBox is Ownable, SettingIds {
     // in other words, if early players get low resourceReward, the later ones get higher.
     // think about snatching wechat's virtual red envelopes in groups.
     function _computeReward() internal returns(uint,uint,uint,uint,uint) {
-        require(totalBoxNotOpened > 0);
+        if ( totalBoxNotOpened == 0 ) {
+            return (0,0,0,0,0);
+        }
 
         uint[5] memory resourceRewards;
+
         // from fomo3d
         // msg.sender is always address(auction),
         // so change msg.sender to tx.origin
@@ -97,10 +102,11 @@ contract RewardBox is Ownable, SettingIds {
                     // recources in resourcePool is set by owner
                     // nad totalBoxNotOpened is set by rules
                     // there is no need to consider overflow
-                // goldReward, woodReward, waterReward, fireReward, soilReward
-                resourceRewards[i] = seed % (2 * resourcePool[i] / totalBoxNotOpened);
-                // update resourcePool
-                _setResourcePool(i, resourcePool[i] - resourceRewards[i]);
+                    // goldReward, woodReward, waterReward, fireReward, soilReward
+                    resourceRewards[i] = seed % (2 * resourcePool[i] / totalBoxNotOpened);
+                    
+                    // update resourcePool
+                    _setResourcePool(i, resourcePool[i] - resourceRewards[i]);
                 }
 
                 if(totalBoxNotOpened == 1) {

@@ -6,11 +6,11 @@ import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "evolutionlandcommon/contracts/interfaces/ISettingsRegistry.sol";
 import "evolutionlandcommon/contracts/interfaces/ILandData.sol";
 import 'evolutionlandcommon/contracts/interfaces/IBurnableERC20.sol';
-import 'evolutionlandcommon/contracts/SettingIds.sol';
 import "./ClockAuction.sol";
+import "./AuctionSettingIds.sol";
 
 
-contract GenesisHolder is Ownable, SettingIds {
+contract GenesisHolder is Ownable, AuctionSettingIds {
     ISettingsRegistry public registry; 
 
     ERC20 public ring;
@@ -42,7 +42,7 @@ contract GenesisHolder is Ownable, SettingIds {
             require(_token != address(ring));
         }
 
-        ClockAuction auction = ClockAuction(registry.addressOf(SettingIds.CONTRACT_CLOCK_AUCTION));
+        ClockAuction auction = ClockAuction(registry.addressOf(AuctionSettingIds.CONTRACT_CLOCK_AUCTION));
         ERC721Basic land = ERC721Basic(registry.addressOf(SettingIds.CONTRACT_ATLANTIS_ERC721LAND));
         // aprove land to auction contract
         land.approve(address(auction), _tokenId);
@@ -53,7 +53,7 @@ contract GenesisHolder is Ownable, SettingIds {
 
 
     function cancelAuction(uint256 _tokenId) public onlyOwner {
-        ClockAuction auction = ClockAuction(registry.addressOf(SettingIds.CONTRACT_CLOCK_AUCTION));
+        ClockAuction auction = ClockAuction(registry.addressOf(AuctionSettingIds.CONTRACT_CLOCK_AUCTION));
         auction.cancelAuction(_tokenId);
     }
 

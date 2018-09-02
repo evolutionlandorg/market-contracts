@@ -1,7 +1,7 @@
 pragma solidity ^0.4.23;
 
-
 import "./ClockAuctionBase.sol";
+import "./interfaces/IMysteriousTreasure.sol";
 
 contract ClockAuction is ClockAuctionBase {
 
@@ -41,12 +41,6 @@ contract ClockAuction is ClockAuctionBase {
         _setPangu(_pangu);
 
         registry = _registry;
-        // convert the first on into uint to avoid error
-        // because the default type is uint8[]
-        // members in resourcesPool refer to
-        // goldPool, woodPool, waterPool, firePool, soilPool respectively
-        uint[5] memory resourcesPool = [uint(10439), 419, 5258, 12200, 10826];
-        rewardBox = new RewardBox(_registry, resourcesPool);
     }
 
     ///////////////////////
@@ -170,7 +164,7 @@ contract ClockAuction is ClockAuctionBase {
         // if someone has already bidden for it before, priceInRING is last bidder's offer
         uint priceInRING = _currentPriceInToken(auction);
 
-        IClaimBountyCalculator claimBountyCalculator = IClaimBountyCalculator(registry.addressOf(SettingIds.CONTRACT_AUCTION_CLAIM_BOUNTY));
+        IClaimBountyCalculator claimBountyCalculator = IClaimBountyCalculator(registry.addressOf(AuctionSettingIds.CONTRACT_AUCTION_CLAIM_BOUNTY));
         uint claimBounty = claimBountyCalculator.tokenAmountForBounty(auction.token);
 
         uint bidMoment = _buyProcess(_buyer, auction, priceInRING, _referer, claimBounty);
@@ -199,7 +193,7 @@ contract ClockAuction is ClockAuctionBase {
             ERC20(auction.token).transfer(_from, refund);
         }
 
-        IClaimBountyCalculator claimBountyCalculator = IClaimBountyCalculator(registry.addressOf(SettingIds.CONTRACT_AUCTION_CLAIM_BOUNTY));
+        IClaimBountyCalculator claimBountyCalculator = IClaimBountyCalculator(registry.addressOf(AuctionSettingIds.CONTRACT_AUCTION_CLAIM_BOUNTY));
         uint claimBounty = claimBountyCalculator.tokenAmountForBounty(auction.token);
 
         uint bidMoment = _buyProcess(_from, auction, priceInToken, _referer, claimBounty);
@@ -244,23 +238,19 @@ contract ClockAuction is ClockAuctionBase {
         // at least bidWaitingTime after last bidder's bid moment,
         // and no one else has bidden during this bidWaitingTime,
         // then any one can claim this token(land) for lastBidder.
-        require(now >= auction.lastBidStartAt + registry.uintOf(SettingIds.UINT_AUCTION_BID_WAITING_TIME),
+        require(now >= auction.lastBidStartAt + registry.uintOf(AuctionSettingIds.UINT_AUCTION_BID_WAITING_TIME),
             "this auction has not finished yet, try again later");
 
-        // if this land asset has reward box on it,
-        // unboxing it will raise resource limit to this land
-        ILandData landData = ILandData(registry.addressOf(SettingIds.CONTRACT_LAND_DATA));
-        if(landData.hasBox(_tokenId)) {
-            rewardBox.unbox(_tokenId);
-        }
+        IMysteriousTreasure mysteriousTreasure = IMysteriousTreasure(registry.addressOf(AuctionSettingIds.CONTRACT_MYSTERIOUS_TREASURE));
+        mysteriousTreasure.unbox(_tokenId);
 
         ERC20 token = ERC20(auction.token);
         address lastBidder = auction.lastBidder;
         uint lastRecord = auction.lastRecord;
         address lastReferer = auction.lastReferer;
 
-        uint auctionCut = registry.uintOf(SettingIds.UINT_AUCTION_CUT);
-        IClaimBountyCalculator claimBountyCalculator = IClaimBountyCalculator(registry.addressOf(SettingIds.CONTRACT_AUCTION_CLAIM_BOUNTY));
+        uint auctionCut = registry.uintOf(AuctionSettingIds.UINT_AUCTION_CUT);
+        IClaimBountyCalculator claimBountyCalculator = IClaimBountyCalculator(registry.addressOf(AuctionSettingIds.CONTRACT_AUCTION_CLAIM_BOUNTY));
 
         uint claimBounty = claimBountyCalculator.tokenAmountForBounty(auction.token);
         // if Auction is sucessful, refererBounty is taken on by evolutionland
@@ -291,7 +281,7 @@ contract ClockAuction is ClockAuctionBase {
     returns (uint256){
         uint priceWithoutBounty = _priceInToken.sub(_claimBounty);
 
-        uint auctionCut = registry.uintOf(SettingIds.UINT_AUCTION_CUT);
+        uint auctionCut = registry.uintOf(AuctionSettingIds.UINT_AUCTION_CUT);
 
         // the first bid
         if (_auction.lastBidder == 0x0 && _priceInToken > 0) {
@@ -311,7 +301,7 @@ contract ClockAuction is ClockAuctionBase {
         if (_auction.lastRecord > 0 && _auction.lastBidder != 0x0) {
             // TODO: repair bug of first bid's time limitation
             // if this the first bid, there is no time limitation
-            require(now <= _auction.lastBidStartAt + registry.uintOf(SettingIds.UINT_AUCTION_BID_WAITING_TIME), "It's too late.");
+            require(now <= _auction.lastBidStartAt + registry.uintOf(AuctionSettingIds.UINT_AUCTION_BID_WAITING_TIME), "It's too late.");
 
             // _priceInToken that is larger than lastRecord
             // was assured in _currentPriceInRING(_auction)

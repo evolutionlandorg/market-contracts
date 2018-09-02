@@ -7,14 +7,12 @@ import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "evolutionlandcommon/contracts/interfaces/ILandData.sol";
 import "evolutionlandcommon/contracts/interfaces/ITokenVendor.sol";
 import "evolutionlandcommon/contracts/interfaces/ISettingsRegistry.sol";
-import 'evolutionlandcommon/contracts/SettingIds.sol';
-import "./RewardBox.sol";
 import "./interfaces/IClaimBountyCalculator.sol";
-
+import "./AuctionSettingIds.sol";
 
 /// @title Auction Core
 /// @dev Contains models, variables, and internal methods for the auction.
-contract ClockAuctionBase is Pausable, SettingIds {
+contract ClockAuctionBase is Pausable, AuctionSettingIds {
     using SafeMath for *;
 
     // Represents an auction on an NFT
@@ -61,9 +59,6 @@ contract ClockAuctionBase is Pausable, SettingIds {
 
     // genesis landholder, pangu is the creator of all in certain version of Chinese mythology.
     address public pangu;
-
-    // address of reward boxes
-    RewardBox public rewardBox;
 
     event AuctionCreated(uint256 tokenId, uint256 startingPriceInToken, uint256 endingPriceInToken, uint256 duration, address token);
     event AuctionSuccessful(uint256 tokenId, uint256 totalPrice, address winner);
@@ -197,7 +192,7 @@ contract ClockAuctionBase is Pausable, SettingIds {
         uint256 secondsPassed = 0;
 
         // get bounty of certain token
-        IClaimBountyCalculator claimBountyCalculator = IClaimBountyCalculator(registry.addressOf(SettingIds.CONTRACT_AUCTION_CLAIM_BOUNTY));
+        IClaimBountyCalculator claimBountyCalculator = IClaimBountyCalculator(registry.addressOf(AuctionSettingIds.CONTRACT_AUCTION_CLAIM_BOUNTY));
         
         uint256 claimBounty = claimBountyCalculator.tokenAmountForBounty(_auction.token);
 
