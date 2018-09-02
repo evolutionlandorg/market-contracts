@@ -41,12 +41,33 @@ contract RINGSmartToken is ISmartToken, Ownable, Utils {
         transfersEnabled = !_disable;
     }
 
-    // Notice: If the owner is converter, make the convert able to call this method.
+    // For some pre-genesis-balances (e.g. those balance not issued from bancor or unissudedTokenHolder), need to leave this method
+    // for update token supply and reveal the real balances.
     function updateTokenSupply(uint256 _newTokenSupply) public onlyOwner {
+        require(_newTokenSupply <= ring.totalSupply());
+
         totalSupply = _newTokenSupply;
     }
 
-    function issue(address _to, uint256 _amount) public {
+    function issueTokensToDecreaseCW(address _to, uint256 _amount) public onlyOwner {
+        issueInternal(_to, _amount);
+    }
+
+    function destroyTokensToIncreaseCW(address _from, uint256 _amount) public onlyOwner {
+        destroyInternal(_from, _amount);
+    }
+
+    // TODO: Only Bancor Convertor
+    function issue(address _to, uint256 _amount) internal {
+        issueInternal(_to, _amount);
+    }
+
+    // TODO: Only Bancor Convertor
+    function destroy(address _from, uint256 _amount) internal {
+        destroyInternal(_from, _amount);
+    }
+
+    function issueInternal(address _to, uint256 _amount) internal {
         totalSupply = safeAdd(totalSupply, _amount);
 
         unissuedTokenHolder.issue(_to, _amount);
@@ -56,7 +77,8 @@ contract RINGSmartToken is ISmartToken, Ownable, Utils {
         emit Issuance(_amount);
     }
 
-    function destroy(address _from, uint256 _amount) public {
+    // TODO: Only Bancor Convertor
+    function destroyInternal(address _from, uint256 _amount) internal {
         unissuedTokenHolder.destroy(_from, _amount);
         
         totalSupply = safeSub(totalSupply, _amount);
