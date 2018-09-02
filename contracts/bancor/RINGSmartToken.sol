@@ -43,7 +43,7 @@ contract RINGSmartToken is ISmartToken, Ownable, Utils {
 
     // For some pre-genesis-balances (e.g. those balance not issued from bancor or unissudedTokenHolder), need to leave this method
     // for update token supply and reveal the real balances.
-    function updateTokenSupply(uint256 _newTokenSupply) public onlyOwner {
+    function updateTokenSupplyToSyncRINGToken(uint256 _newTokenSupply) public onlyOwner {
         require(_newTokenSupply <= ring.totalSupply());
 
         totalSupply = _newTokenSupply;
