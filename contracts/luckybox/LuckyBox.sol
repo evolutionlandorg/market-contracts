@@ -15,8 +15,8 @@ contract LuckyBox is Pausable {
 
     address public wallet;
 
-    mapping (address => uint256) goldSalesRecord;
-    mapping (address => uint256) silverSalesRecord;
+    mapping (address => uint256) public goldSalesRecord;
+    mapping (address => uint256) public silverSalesRecord;
 
     uint256 public goldSaleLimit;
     uint256 public silverSaleLimit;
