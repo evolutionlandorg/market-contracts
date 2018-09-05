@@ -37,6 +37,7 @@ contract LuckyBox is Pausable {
 
     function buyBoxs(address _buyer, uint256 _goldBoxAmount, uint256 _silverBoxAmount) payable public whenNotPaused {
         require(_buyer != address(0));
+        require(_goldBoxAmount <= goldBoxAmountForSale && _silverBoxAmount <= silverBoxAmountForSale);
         require(goldSalesRecord[_buyer] + _goldBoxAmount <= goldSaleLimit);
         require(silverSalesRecord[_buyer] + _silverBoxAmount <= silverSaleLimit);
 
