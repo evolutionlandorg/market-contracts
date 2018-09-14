@@ -23,8 +23,6 @@ contract ClockAuction is ClockAuctionBase {
     ///  bidWaitingMinutes - biggest waiting time from a bid's starting to ending(in minutes)
     constructor(
         address _nftAddress,
-        address _RING,
-        address _tokenVendor,
         address _pangu,
         ISettingsRegistry _registry
         )
@@ -34,13 +32,15 @@ contract ClockAuction is ClockAuctionBase {
         require(candidateContract.supportsInterface(0x80ac58cd));
 
         nonFungibleContract = candidateContract;
+        registry = _registry;
 
-        _setRING(_RING);
-        _setTokenVendor(_tokenVendor);
-
+        RING = ERC20(registry.addressOf(AuctionSettingIds.CONTRACT_RING_ERC20_TOKEN));
+        // NOTE: to make auction work well
+        // set address of bancorExchange in registry first
+        // bancorExchange = IBancorExchange(registry.addressOf(AuctionSettingIds.BANCOR_EXCHANGE_ADDRESS));
         _setPangu(_pangu);
 
-        registry = _registry;
+
     }
 
     ///////////////////////
@@ -115,24 +115,16 @@ contract ClockAuction is ClockAuctionBase {
     /// @dev Bids on an open auction, completing the auction and transferring
     ///  ownership of the NFT if enough Ether is supplied.
     /// @param _tokenId - ID of token to bid on.
+    /// @dev bid with eth(in wei). Computes the price and transfers winnings.
+    /// Does NOT transfer ownership of token.
     function bidWithETH(uint256 _tokenId, address _referer)
     public
     payable
     whenNotPaused
     isHuman
-    {
-
-        // _bid will throw if the bid or funds transfer fails
-        _bidWithETH(_tokenId, msg.value, msg.sender, _referer);
-    }
-
-
-    /// @dev bid with eth(in wei). Computes the price and transfers winnings.
-    /// Does NOT transfer ownership of token.
-    function _bidWithETH(uint256 _tokenId, uint256 _bidAmount, address _buyer, address _referer)
-    internal
     returns (uint256)
     {
+        require(msg.value > 0);
         // Get a reference to the auction struct
         Auction storage auction = tokenIdToAuction[_tokenId];
         // can only bid the auction that allows ring
@@ -146,32 +138,31 @@ contract ClockAuction is ClockAuctionBase {
 
         // Check that the incoming bid is higher than the current
         // price
-        uint256 priceInETH = _currentPriceETH(auction);
+        uint256 priceInRING = _currentPriceInToken(auction);
         // assure msg.value larger than current price in ring
-        require(_bidAmount >= priceInETH,
-            "your offer is lower than the current price, try again with a higher one.");
+        // priceInRING represents minimum return
+        // if return is smaller than priceInRING
+        // it will be reverted in bancorprotocol
+        // so dont worry
+        uint256 ringFromETH = bancorExchange.buyRING.value(msg.value)(priceInRING);
 
-        uint refund = _bidAmount - priceInETH;
+
+        uint refund = ringFromETH - priceInRING;
         if (refund > 0) {
-            _buyer.transfer(refund);
+            // if there is surplus RING
+            // then give it back to the msg.sender
+            RING.transfer(msg.sender, refund);
         }
-
-        // assure that this get ring back from tokenVendor
-        // TODO: after tokenVendor introducing bancor protocol, check this again!
-        require(tokenVendor.buyToken.value(priceInETH)(address(this)));
-
-        // if no one has bidden for auction, priceInRING is computed through linear operation
-        // if someone has already bidden for it before, priceInRING is last bidder's offer
-        uint priceInRING = _currentPriceInToken(auction);
 
         IClaimBountyCalculator claimBountyCalculator = IClaimBountyCalculator(registry.addressOf(AuctionSettingIds.CONTRACT_AUCTION_CLAIM_BOUNTY));
         uint claimBounty = claimBountyCalculator.tokenAmountForBounty(auction.token);
-
-        uint bidMoment = _buyProcess(_buyer, auction, priceInRING, _referer, claimBounty);
+        IBancorExchange bancorExchange = IBancorExchange(registry.addressOf(AuctionSettingIds.BANCOR_EXCHANGE_ADDRESS));
+        uint bidMoment = _buyProcess(msg.sender, auction, priceInRING, _referer, claimBounty);
 
         // Tell the world!
         // 0x0 refers to ETH
-        emit NewBid(_tokenId, _buyer, _referer, priceInETH, 0x0, bidMoment);
+        // NOTE: priceInRING, not priceInETH
+        emit NewBid(_tokenId, msg.sender, _referer, priceInRING, 0x0, bidMoment);
 
         return priceInRING;
     }
@@ -421,13 +412,6 @@ contract ClockAuction is ClockAuctionBase {
         _setPangu(_pangu);
     }
 
-    function setTokenVendor(address _tokenVendor) public onlyOwner {
-        _setTokenVendor(_tokenVendor);
-    }
-
-    function setRING(address _ring) public onlyOwner {
-        _setRING(_ring);
-    }
 
     // get auction's price of last bidder offered
     // @dev return price of _auction (in RING)

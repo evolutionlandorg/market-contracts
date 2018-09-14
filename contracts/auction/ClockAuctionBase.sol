@@ -5,10 +5,10 @@ import "openzeppelin-solidity/contracts/token/ERC721/ERC721Basic.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "evolutionlandcommon/contracts/interfaces/ILandData.sol";
-import "evolutionlandcommon/contracts/interfaces/ITokenVendor.sol";
 import "evolutionlandcommon/contracts/interfaces/ISettingsRegistry.sol";
 import "./interfaces/IClaimBountyCalculator.sol";
 import "./AuctionSettingIds.sol";
+import "./interfaces/IBancorExchange.sol";
 
 /// @title Auction Core
 /// @dev Contains models, variables, and internal methods for the auction.
@@ -54,8 +54,8 @@ contract ClockAuctionBase is Pausable, AuctionSettingIds {
     //add address of RING
     ERC20 public RING;
 
-    // address of tokenvendor which exchange eth to ring or ring to eth
-    ITokenVendor public tokenVendor;
+    // address of bancorExchange which exchange eth to ring or ring to eth
+    // IBancorExchange public bancorExchange;
 
     // genesis landholder, pangu is the creator of all in certain version of Chinese mythology.
     address public pangu;
@@ -172,13 +172,6 @@ contract ClockAuctionBase is Pausable, AuctionSettingIds {
         return (_auction.startedAt > 0);
     }
 
-    // @dev return current price in ETH
-    function _currentPriceETH(Auction storage _auction)
-    internal
-    view
-    returns (uint256) {
-        return (_currentPriceInToken(_auction) / getExchangeRate());
-    }
 
     /// @dev Returns current price of an NFT on auction. Broken into two
     ///  functions (this one, that computes the duration from the auction
@@ -264,13 +257,6 @@ contract ClockAuctionBase is Pausable, AuctionSettingIds {
         }
     }
 
-    function _setTokenVendor(address _tokenVendor) internal {
-        tokenVendor = ITokenVendor(_tokenVendor);
-    }
-
-    function _setRING(address _ring) internal {
-        RING = ERC20(_ring);
-    }
 
     function _setPangu(address _pangu) internal {
         pangu = _pangu;
