@@ -262,9 +262,5 @@ contract ClockAuctionBase is Pausable, AuctionSettingIds {
         pangu = _pangu;
     }
 
-    // getexchangerate from tokenVendor
-    function getExchangeRate() public view returns (uint256) {
-        return tokenVendor.buyTokenRate();
-    }
 
 }
