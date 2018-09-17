@@ -37,7 +37,6 @@ contract ClockAuction is ClockAuctionBase {
         RING = ERC20(registry.addressOf(AuctionSettingIds.CONTRACT_RING_ERC20_TOKEN));
         // NOTE: to make auction work well
         // set address of bancorExchange in registry first
-        // bancorExchange = IBancorExchange(registry.addressOf(AuctionSettingIds.BANCOR_EXCHANGE_ADDRESS));
         _setPangu(_pangu);
 
 
@@ -144,6 +143,7 @@ contract ClockAuction is ClockAuctionBase {
         // if return is smaller than priceInRING
         // it will be reverted in bancorprotocol
         // so dont worry
+        IBancorExchange bancorExchange = IBancorExchange(registry.addressOf(AuctionSettingIds.BANCOR_EXCHANGE_ADDRESS));
         uint256 ringFromETH = bancorExchange.buyRING.value(msg.value)(priceInRING);
 
 
@@ -156,7 +156,6 @@ contract ClockAuction is ClockAuctionBase {
 
         IClaimBountyCalculator claimBountyCalculator = IClaimBountyCalculator(registry.addressOf(AuctionSettingIds.CONTRACT_AUCTION_CLAIM_BOUNTY));
         uint claimBounty = claimBountyCalculator.tokenAmountForBounty(auction.token);
-        IBancorExchange bancorExchange = IBancorExchange(registry.addressOf(AuctionSettingIds.BANCOR_EXCHANGE_ADDRESS));
         uint bidMoment = _buyProcess(msg.sender, auction, priceInRING, _referer, claimBounty);
 
         // Tell the world!
@@ -430,5 +429,9 @@ contract ClockAuction is ClockAuctionBase {
     // @dev if someone new wants to bid, the lowest price he/she need to afford
     function computeNextBidRecord(uint _tokenId) public view returns (uint256) {
         return _currentPriceInToken(tokenIdToAuction[_tokenId]);
+    }
+
+    function updateRING() public onlyOwner {
+        RING = ERC20(registry.addressOf(AuctionSettingIds.CONTRACT_RING_ERC20_TOKEN));
     }
 }
