@@ -10,7 +10,7 @@ this project implements the whole Dutch Auction.
 在部署`ClockAuction`之前需要部署的合约如下:
 1. Land合约
 2. RING合约
-3. tokenVendor合约 (用于ETH和RING相互转换)
+3. bancorExchange合约 (用于ETH和RING相互转换)
 4. GenesisHolder合约 (即ClockAucion中的pangu)
 5. LandData合约 (存储地块属性)
 
@@ -18,13 +18,8 @@ this project implements the whole Dutch Auction.
 ## 初始化相关
 在合约的构造器中涉及到的参数，其意义分别是：
 1. address _nftAddress: LAND合约地址
-2. address _RING: RING合约地址
-3. address _tokenVendor: ETH和RING相互转换的TokenVendor合约地址
-4. uint256 _cut: 交易手续费，即拍卖完成后不返还给卖家的部分。范围[0, 10000]，对应着[0%, 100%]
-5. uint245 _waitingMinutes: 每次竞拍等待的最长时间，填入分钟数
-6. uint256 _claimBountyForRING: ring的claimBounty，建议设置成10-20个ring(记得*10^18)
-7. address _pangu: 拍卖的分账合约，执行初代拍卖的合约
-8. address _landData: 地块信息的合约地址
+2. address _pangu: 拍卖的分账合约，执行初代拍卖的合约
+3. address _registry: 注册各变量的合约地址
 
 
 ## 拍卖操作相关
