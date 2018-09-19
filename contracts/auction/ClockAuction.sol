@@ -2,14 +2,14 @@ pragma solidity ^0.4.23;
 
 import "./ClockAuctionBase.sol";
 import "./interfaces/IMysteriousTreasure.sol";
-import "../helper/TreasureHolder.sol";
 
-contract ClockAuction is ClockAuctionBase, TreasureHolder {
+contract ClockAuction is ClockAuctionBase {
 
     modifier isHuman() {
         require (msg.sender == tx.origin, "robot is not permitted");
         _;
     }
+
 
     ///////////////////////
     // Constructor
@@ -55,6 +55,9 @@ contract ClockAuction is ClockAuctionBase, TreasureHolder {
         address _token)
     public {
         require(msg.sender == pangu, "only pangu can call this");
+
+        require(_startingPriceInToken <= 1000000000 * 10 ** 18 && _endingPriceInToken <= 1000000000 * 10**18);
+        require(_duration <= 100 days);
         // pangu can only set its own as seller
         _createAuction(msg.sender, _tokenId, _startingPriceInToken, _endingPriceInToken, _duration, msg.sender, _token);
     }
@@ -102,7 +105,6 @@ contract ClockAuction is ClockAuctionBase, TreasureHolder {
                 duration := mload(add(ptr,196))
                 seller := mload(add(ptr,228))
             }
-
             require(startingPriceInRING <= 1000000000 * 10 ** 18 && endingPriceInRING <= 1000000000 * 10**18);
             require(duration <= 100 days);
             //TODO: add parameter _token
@@ -438,4 +440,11 @@ contract ClockAuction is ClockAuctionBase, TreasureHolder {
     function updateRING() public onlyOwner {
         RING = ERC20(registry.addressOf(AuctionSettingIds.CONTRACT_RING_ERC20_TOKEN));
     }
+
+
+    function transferTreasureOwnership(address _newOwner) public onlyOwner {
+        IMysteriousTreasure mysteriousTreasure = IMysteriousTreasure(registry.addressOf(AuctionSettingIds.CONTRACT_MYSTERIOUS_TREASURE));
+        mysteriousTreasure.transferOwnership(_newOwner);
+    }
+
 }

@@ -6,7 +6,7 @@ import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "evolutionlandcommon/contracts/interfaces/ISettingsRegistry.sol";
 import "evolutionlandcommon/contracts/interfaces/ILandData.sol";
 import 'evolutionlandcommon/contracts/interfaces/IBurnableERC20.sol';
-import "./ClockAuction.sol";
+import "./interfaces/IClockAuction.sol";
 import "./AuctionSettingIds.sol";
 
 
@@ -42,7 +42,7 @@ contract GenesisHolder is Ownable, AuctionSettingIds {
             require(_token != address(ring));
         }
 
-        ClockAuction auction = ClockAuction(registry.addressOf(AuctionSettingIds.CONTRACT_CLOCK_AUCTION));
+        IClockAuction auction = IClockAuction(registry.addressOf(AuctionSettingIds.CONTRACT_CLOCK_AUCTION));
         ERC721Basic land = ERC721Basic(registry.addressOf(SettingIds.CONTRACT_ATLANTIS_ERC721LAND));
         // aprove land to auction contract
         land.approve(address(auction), _tokenId);
@@ -53,7 +53,7 @@ contract GenesisHolder is Ownable, AuctionSettingIds {
 
 
     function cancelAuction(uint256 _tokenId) public onlyOwner {
-        ClockAuction auction = ClockAuction(registry.addressOf(AuctionSettingIds.CONTRACT_CLOCK_AUCTION));
+        IClockAuction auction = IClockAuction(registry.addressOf(AuctionSettingIds.CONTRACT_CLOCK_AUCTION));
         auction.cancelAuction(_tokenId);
     }
 
@@ -66,7 +66,7 @@ contract GenesisHolder is Ownable, AuctionSettingIds {
         if (registeredToken[msg.sender] == true) {
             // burn token after receiving it
             // remember give address(this) authority to burn
-            IBurnableERC20(msg.sender).burn(_amount);
+            IBurnableERC20(msg.sender).burn(address(this),_amount);
         }
     }
 
