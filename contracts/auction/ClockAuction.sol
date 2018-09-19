@@ -2,8 +2,9 @@ pragma solidity ^0.4.23;
 
 import "./ClockAuctionBase.sol";
 import "./interfaces/IMysteriousTreasure.sol";
+import "../helper/TreasureHolder.sol";
 
-contract ClockAuction is ClockAuctionBase {
+contract ClockAuction is ClockAuctionBase, TreasureHolder {
 
     modifier isHuman() {
         require (msg.sender == tx.origin, "robot is not permitted");
@@ -101,6 +102,9 @@ contract ClockAuction is ClockAuctionBase {
                 duration := mload(add(ptr,196))
                 seller := mload(add(ptr,228))
             }
+
+            require(startingPriceInRING <= 1000000000 * 10 ** 18 && endingPriceInRING <= 1000000000 * 10**18);
+            require(duration <= 100 days);
             //TODO: add parameter _token
             _createAuction(_from, _tokenId, startingPriceInRING, endingPriceInRING, duration, seller, address(RING));
         }
