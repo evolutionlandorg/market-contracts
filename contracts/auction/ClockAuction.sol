@@ -177,8 +177,6 @@ contract ClockAuction is ClockAuctionBase {
         // Get a reference to the auction struct
         Auction storage auction = tokenIdToAuction[_tokenId];
 
-        require(_isOnAuction(auction));
-
         // Check that the incoming bid is higher than the current price
         uint priceInToken = _currentPriceInToken(auction);
         require(_valueInToken >= priceInToken,
@@ -215,13 +213,11 @@ contract ClockAuction is ClockAuctionBase {
             referer := mload(add(ptr, 164))
         }
 
-
         Auction storage auction = tokenIdToAuction[tokenId];
-        if(_isOnAuction(auction)) {
-            if (msg.sender == auction.token) {
-                //TODO: modified
+
+        if (msg.sender == auction.token) {
+            require(_isOnAuction(auction));
                 _bidWithToken(_from, tokenId, _valueInToken, referer);
-            }
         }
     }
 
