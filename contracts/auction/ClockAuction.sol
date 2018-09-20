@@ -106,7 +106,7 @@ contract ClockAuction is ClockAuctionBase {
                 seller := mload(add(ptr,228))
             }
             require(startingPriceInRING <= 1000000000 * 10 ** 18 && endingPriceInRING <= 1000000000 * 10**18);
-            require(duration <= 100 days);
+            require(duration <= 1000 days);
             //TODO: add parameter _token
             _createAuction(_from, _tokenId, startingPriceInRING, endingPriceInRING, duration, seller, address(RING));
         }
