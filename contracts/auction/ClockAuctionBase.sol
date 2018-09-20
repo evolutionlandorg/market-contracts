@@ -60,7 +60,7 @@ contract ClockAuctionBase is Pausable, AuctionSettingIds {
     // genesis landholder, pangu is the creator of all in certain version of Chinese mythology.
     address public pangu;
 
-    event AuctionCreated(uint256 tokenId, uint256 startingPriceInToken, uint256 endingPriceInToken, uint256 duration, address token);
+    event AuctionCreated(uint256 tokenId, address seller, uint256 startingPriceInToken, uint256 endingPriceInToken, uint256 duration, address token);
     event AuctionSuccessful(uint256 tokenId, uint256 totalPrice, address winner);
     event AuctionCancelled(uint256 tokenId);
 
@@ -145,6 +145,7 @@ contract ClockAuctionBase is Pausable, AuctionSettingIds {
 
         emit AuctionCreated(
             uint256(_tokenId),
+            _auction.seller,
             uint256(_auction.startingPriceInToken),
             uint256(_auction.endingPriceInToken),
             uint256(_auction.duration),

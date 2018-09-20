@@ -27,6 +27,6 @@ contract AuctionSettingIds is SettingIds {
 
     // users change eth(in wei) into ring with bancor exchange
     // which introduce bancor protocol to regulate the price of ring
-    bytes32 public constant BANCOR_EXCHANGE_ADDRESS = "BANCOR_EXCHANGE";
+    bytes32 public constant CONTRACT_BANCOR_EXCHANGE = "BANCOR_EXCHANGE";
 
 }
