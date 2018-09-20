@@ -214,9 +214,9 @@ contract ClockAuction is ClockAuctionBase {
         }
 
         Auction storage auction = tokenIdToAuction[tokenId];
+        require(_isOnAuction(auction));
 
         if (msg.sender == auction.token) {
-            require(_isOnAuction(auction));
                 _bidWithToken(_from, tokenId, _valueInToken, referer);
         }
     }
