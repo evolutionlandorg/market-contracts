@@ -215,6 +215,7 @@ contract ClockAuction is ClockAuctionBase {
             referer := mload(add(ptr, 164))
         }
 
+
         Auction storage auction = tokenIdToAuction[tokenId];
         if(_isOnAuction(auction)) {
             if (msg.sender == auction.token) {
