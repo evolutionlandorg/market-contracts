@@ -35,7 +35,7 @@ contract ClockAuction is ClockAuctionBase {
         nonFungibleContract = candidateContract;
         registry = _registry;
 
-        RING = ERC20(registry.addressOf(AuctionSettingIds.CONTRACT_RING_ERC20_TOKEN));
+        RING = ERC20(registry.addressOf(SettingIds.CONTRACT_RING_ERC20_TOKEN));
         // NOTE: to make auction work well
         // set address of bancorExchange in registry first
         _setPangu(_pangu);
@@ -231,7 +231,7 @@ contract ClockAuction is ClockAuctionBase {
         // at least bidWaitingTime after last bidder's bid moment,
         // and no one else has bidden during this bidWaitingTime,
         // then any one can claim this token(land) for lastBidder.
-        require(now >= auction.lastBidStartAt + registry.uintOf(AuctionSettingIds.UINT_AUCTION_BID_WAITING_TIME),
+        require(auction.lastBidder != 0x0 && now >= auction.lastBidStartAt + registry.uintOf(AuctionSettingIds.UINT_AUCTION_BID_WAITING_TIME),
             "this auction has not finished yet, try again later");
 
         IMysteriousTreasure mysteriousTreasure = IMysteriousTreasure(registry.addressOf(AuctionSettingIds.CONTRACT_MYSTERIOUS_TREASURE));
@@ -435,7 +435,7 @@ contract ClockAuction is ClockAuctionBase {
     }
 
     function updateRING() public onlyOwner {
-        RING = ERC20(registry.addressOf(AuctionSettingIds.CONTRACT_RING_ERC20_TOKEN));
+        RING = ERC20(registry.addressOf(SettingIds.CONTRACT_RING_ERC20_TOKEN));
     }
 
 
