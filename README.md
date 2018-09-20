@@ -74,3 +74,17 @@ data的例子如下（分行仅为显示清晰）：
 
 ## 提币相关
 使用`clockAunction.sol`中的`claimTokens`方法
+
+### KOVAN测试网络地址
+```js
+SettingsRegistry: 0x31ff7a0106cae24756a62657660e3878dcec77dc
+ClaimBountyCalculator: 0x8db5203dd8b34efcaa852b29ae9f597a75fbda4e
+AuctionSettingIds: 0x2ae7d0bdddc056a682372864fe723f84bc9e8922
+MysteriousTreasure: 0x50893ea6964e2c9fc3b9a791c556d752e317bb84
+Atlantis: 0x8df7287914144d89adf44d8fdd0b72f4990fb2fc
+genesisHolder: 0x51a6b0ceb2985c48f45e081a6d8b0675b1cbb3ae
+BancorExchange: 0xe243c71d1531c356c8a7072979d4acc7362761ba
+LandGenesisDData: 0xaac0ff28c64e6f06728a5e1ce6239f5e3709cd42
+ClockAuction: 0xe10a7586ce03c58066f6f30b7033bbb79e916243
+RING: 0x6df4e0da83e47e3f6cd7d725224bc73f0e198c4f
+```
