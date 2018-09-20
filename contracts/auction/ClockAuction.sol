@@ -35,7 +35,7 @@ contract ClockAuction is ClockAuctionBase {
         nonFungibleContract = candidateContract;
         registry = _registry;
 
-        RING = ERC20(registry.addressOf(AuctionSettingIds.CONTRACT_RING_ERC20_TOKEN));
+        RING = ERC20(registry.addressOf(SettingIds.CONTRACT_RING_ERC20_TOKEN));
         // NOTE: to make auction work well
         // set address of bancorExchange in registry first
         _setPangu(_pangu);
@@ -435,7 +435,7 @@ contract ClockAuction is ClockAuctionBase {
     }
 
     function updateRING() public onlyOwner {
-        RING = ERC20(registry.addressOf(AuctionSettingIds.CONTRACT_RING_ERC20_TOKEN));
+        RING = ERC20(registry.addressOf(SettingIds.CONTRACT_RING_ERC20_TOKEN));
     }
 
 
