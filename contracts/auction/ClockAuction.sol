@@ -149,7 +149,7 @@ contract ClockAuction is ClockAuctionBase {
         // if return is smaller than priceInRING
         // it will be reverted in bancorprotocol
         // so dont worry
-        IBancorExchange bancorExchange = IBancorExchange(registry.addressOf(AuctionSettingIds.BANCOR_EXCHANGE_ADDRESS));
+        IBancorExchange bancorExchange = IBancorExchange(registry.addressOf(AuctionSettingIds.CONTRACT_BANCOR_EXCHANGE));
         uint256 ringFromETH = bancorExchange.buyRING.value(msg.value)(priceInRING);
 
 
