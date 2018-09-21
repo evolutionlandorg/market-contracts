@@ -66,7 +66,7 @@ contract GenesisHolder is Ownable, AuctionSettingIds {
         if (registeredToken[msg.sender] == true) {
             // burn token after receiving it
             // remember give address(this) authority to burn
-            IBurnableERC20(msg.sender).burn(address(this),_amount);
+            IBurnableERC20(msg.sender).burn(address(this), _amount);
         }
     }
 
