@@ -3,3 +3,5 @@ build
 node_modules
 .idea
 contracts-flattener
+package-lock.json
+truffle.js
