@@ -1,13 +1,15 @@
 
 const SettingsRegistry = artifacts.require('SettingsRegistry');
-const RING = artifacts.require('StandardERC223');
 const ClaimBountyCalculator = artifacts.require('ClaimBountyCalculator');
 const AuctionSettingIds = artifacts.require('AuctionSettingIds');
 const MysteriousTreasure = artifacts.require('MysteriousTreasure');
 const GenesisHolder = artifacts.require('GenesisHolder')
 const LandGenesisData = artifacts.require('LandGenesisData');
 const Atlantis = artifacts.require('Atlantis');
+const DT = artifacts.require('DeployAndTest');
 // bancor related
+const RING = artifacts.require('StandardERC223');
+const SmartToken = artifacts.require('SmartToken');
 const BancorConverter = artifacts.require('BancorConverter');
 const BancorFormula = artifacts.require('BancorFormula');
 const BancorGasPriceLimit = artifacts.require('BancorGasPriceLimit');
@@ -20,7 +22,7 @@ const BancorExchange = artifacts.require('BancorExchange');
 const ContractIds = artifacts.require('ContractIds');
 const FeatureIds = artifacts.require('FeatureIds');
 
-const gasPrice = 30000000000;
+const gasPrice = 30000000000000;
 
 const weight10Percent = 100000;
 
@@ -84,45 +86,43 @@ contract('bancor deployment', async(accounts) => {
         await contractRegistry.registerAddress(gasPriceLimitId, bancorGasPriceLimit.address);
         console.log('bancorGasPriceLimit address: ', bancorGasPriceLimit.address);
 
-        featureIds = await FeatureIds.new({from: accounts[0]});
+        featureIds = await FeatureIds.new();
         console.log('featureIds address: ', featureIds.address);
 
-        whiteList = await WhiteList.new({from: accounts[0]});
+        whiteList = await WhiteList.new();
         console.log('whiteList address: ', whiteList.address);
 
-        etherToken = await EtherToken.new({from: accounts[0]});
+        etherToken = await EtherToken.new();
         console.log('etherToken address: ', etherToken.address);
 
-        ring = await RING.new("RING",{from: accounts[0]});
+        ring = await RING.new("RING");
         console.log('ring address: ', ring.address);
 
         // more complex
-        bancorNetwork = await BancorNetwork.new(contractRegistry.address, {from: accounts[0]});
+        bancorNetwork = await BancorNetwork.new(contractRegistry.address);
         bancorNetworkId = await contractIds.BANCOR_NETWORK.call();
         await contractRegistry.registerAddress(bancorNetworkId, bancorNetwork.address);
 
-        bancorConverter = await BancorConverter.new(ring.address, contractRegistry.address, 0, etherToken.address, weight10Percent, {from: accounts[0]});
+        bancorConverter = await BancorConverter.new(ring.address, contractRegistry.address, 0, etherToken.address, weight10Percent);
         console.log('bancorConverter address: ', bancorConverter.address);
 
-        bancorExchange = await BancorExchange.new(ring.address, bancorNetwork.address, bancorConverter.address, {from: accounts[0]})
+        bancorExchange = await BancorExchange.new(ring.address, bancorNetwork.address, bancorConverter.address);
         console.log('bancorExchange address: ', bancorExchange.address);
-
 
         //do this to make SmartToken.totalSupply > 0
-        await ring.issue(accounts[0], 110000 * 10**18, {from:accounts[0]});
-        await ring.setOwner(bancorConverter.address, {from:accounts[0]});
+        await ring.issue(accounts[0], 110000 * 10**18);
+        await ring.setOwner(bancorConverter.address);
 
-        await etherToken.deposit({from: accounts[0], value: 10**18});
-        await etherToken.transfer(bancorConverter.address, 10**18, {from: accounts[0]});
+        await etherToken.deposit({value: 1 * 10**18});
+        await etherToken.transfer(bancorConverter.address, 10**18);
 
-        await whiteList.addAddress(bancorExchange.address, {from: accounts[0]});
-        await bancorConverter.setConversionWhitelist(whiteList.address, {from: accounts[0]});
+        await whiteList.addAddress(bancorExchange.address);
+        await bancorConverter.setConversionWhitelist(whiteList.address);
 
-        await bancorNetwork.registerEtherToken(etherToken.address, true, {from : accounts[0]});
+        await bancorNetwork.registerEtherToken(etherToken.address, true);
 
-        await bancorExchange.setQuickBuyPath([etherToken.address, etherToken.address, ring.address], {from: accounts[0]})
-        await bancorExchange.setQuickSellPath([ring.address, ring.address, etherToken.address], {from: accounts[0]});
-        console.log('bancorExchange address: ', bancorExchange.address);
+        await bancorExchange.setQuickBuyPath([etherToken.address, ring.address, ring.address])
+        await bancorExchange.setQuickSellPath([ring.address, ring.address, etherToken.address]);
     })
 
     it('verify configuration in contractRegistry', async() => {
@@ -176,6 +176,7 @@ contract('bancor deployment', async(accounts) => {
         let amount1 = await bancorConverter.getReturn(etherToken.address, ring.address, 10**18);
         console.log('getReturn: ', amount1.valueOf());
         assert.equal(amount.valueOf(), amount1.valueOf());
+
     })
 
     it('bancorNetwork related checks', async () => {
@@ -187,16 +188,13 @@ contract('bancor deployment', async(accounts) => {
         // connctor number
         let count = await bancorConverter.connectorTokenCount();
         assert.equal(count, 1);
-        // get return by path
-        // let amount = await bancorNetwork.getReturnByPath([etherToken.address, etherToken.address, ring.address], 10**18);
-        // console.log('get return by path: ', amount.valueOf());
 
     })
 
     it('bancorExchange related checks', async () => {
         let et = await bancorExchange.quickBuyPath(0);
         assert.equal(et, etherToken.address);
-        assert.equal(et, await bancorExchange.quickBuyPath(1));
+        assert.equal(ring.address, await bancorExchange.quickBuyPath(1));
         assert.equal(ring.address, await bancorExchange.quickBuyPath(2));
 
         let st = await bancorExchange.quickSellPath(0);
@@ -206,10 +204,20 @@ contract('bancor deployment', async(accounts) => {
 
     })
 
-    it('buy rings', async() => {
-       let amount = await bancorExchange.buyRING(1, {from: accounts[1], value: 10**18});
-       assert(amount.valueOf() > 1);
+    it('check tx gasprice available or not in private c', async() => {
+        console.log(web3.eth.gasPrice);
+        let dt = await DT.new();
+        let price = await dt.getTxPrice();
+        console.log("tx price: ", price.valueOf());
     })
+
+    it('buy rings', async() => {
+        let amount = await bancorExchange.buyRING(1, {from: accounts[1], value: 10 ** 18});
+        let ringBalanceOfAccount1 = await ring.balanceOf(accounts[1]);
+        console.log('amount from exchange: ', amount.valueOf());
+        console.log('balance in ring of account1: ', ringBalanceOfAccount1.valueOf());
+    })
+
 
 })
 
@@ -232,8 +240,5 @@ contract('bancor deployment', async(accounts) => {
 //
 //         bancorExchange = await BancorExchange.new('')
 //     })
-//
-//
-//
 // })
 
