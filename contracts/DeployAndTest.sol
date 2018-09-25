@@ -1,13 +1,9 @@
 pragma solidity ^0.4.23;
 
-import "@evolutionland/land/contracts/land/Atlantis.sol";
 import "@evolutionland/common/contracts/SettingsRegistry.sol";
-<<<<<<< HEAD
 import "@evolutionland/common/contracts/StandardERC223.sol";
-import "@evolutionland/land/contracts/land/LandGenesisData.sol";
 import "@evolutionland/land/contracts/land/Atlantis.sol";
-=======
->>>>>>> upstream/master
+import "@evolutionland/land/contracts/land/LandGenesisData.sol";
 import "@evolutionland/bancor/solidity/contracts/converter/BancorConverter.sol";
 import "@evolutionland/bancor/solidity/contracts/converter/BancorFormula.sol";
 import "@evolutionland/bancor/solidity/contracts/converter/BancorGasPriceLimit.sol";
