@@ -2,8 +2,8 @@ pragma solidity ^0.4.23;
 
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "evolutionlandcommon/contracts/interfaces/ILandData.sol";
-import "evolutionlandcommon/contracts/interfaces/ISettingsRegistry.sol";
+import "@evolutionland/common/contracts/interfaces/ILandData.sol";
+import "@evolutionland/common/contracts/interfaces/ISettingsRegistry.sol";
 import "./AuctionSettingIds.sol";
 
 contract MysteriousTreasure is Ownable, AuctionSettingIds {

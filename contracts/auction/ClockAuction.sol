@@ -30,7 +30,7 @@ contract ClockAuction is ClockAuctionBase {
     public {
         ERC721Basic candidateContract = ERC721Basic(_nftAddress);
         // InterfaceId_ERC721 = 0x80ac58cd;
-        require(candidateContract.supportsInterface(0x80ac58cd));
+        // require(candidateContract.supportsInterface(0x80ac58cd));
 
         nonFungibleContract = candidateContract;
         registry = _registry;
