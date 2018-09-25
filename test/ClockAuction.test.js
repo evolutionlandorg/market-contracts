@@ -6,10 +6,9 @@ const MysteriousTreasure = artifacts.require('MysteriousTreasure');
 const GenesisHolder = artifacts.require('GenesisHolder')
 const LandGenesisData = artifacts.require('LandGenesisData');
 const Atlantis = artifacts.require('Atlantis');
-const DT = artifacts.require('DeployAndTest');
+
 // bancor related
 const RING = artifacts.require('StandardERC223');
-const SmartToken = artifacts.require('SmartToken');
 const BancorConverter = artifacts.require('BancorConverter');
 const BancorFormula = artifacts.require('BancorFormula');
 const BancorGasPriceLimit = artifacts.require('BancorGasPriceLimit');
@@ -202,13 +201,6 @@ contract('bancor deployment', async(accounts) => {
         assert.equal(st, await bancorExchange.quickSellPath(1));
         assert.equal(etherToken.address, await bancorExchange.quickSellPath(2));
 
-    })
-
-    it('check tx gasprice available or not in private c', async() => {
-        console.log(web3.eth.gasPrice);
-        let dt = await DT.new();
-        let price = await dt.getTxPrice();
-        console.log("tx price: ", price.valueOf());
     })
 
     it('buy rings', async() => {

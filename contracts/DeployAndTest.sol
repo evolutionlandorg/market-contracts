@@ -16,12 +16,7 @@ import "@evolutionland/bancor/solidity/contracts/BancorNetwork.sol";
 import "@evolutionland/bancor/solidity/contracts/BancorExchange.sol";
 import "@evolutionland/bancor/solidity/contracts/ContractIds.sol";
 import "@evolutionland/bancor/solidity/contracts/FeatureIds.sol";
-import "@evolutionland/bancor/solidity/contracts/token/SmartToken.sol";
 
 contract DeployAndTest {
-    function getTxPrice() public returns (uint) {
-        uint price = tx.gasprice;
-        return price;
-    }
 
 }
