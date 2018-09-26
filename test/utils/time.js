@@ -30,6 +30,10 @@ function increaseTime (duration) {
     });
 }
 
+function latestTime () {
+    return web3.eth.getBlock('latest').timestamp;
+}
+
 module.exports = {
     increaseTime: increaseTime,
     increaseTimeTo: increaseTimeTo
