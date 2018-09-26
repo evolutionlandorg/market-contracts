@@ -6,6 +6,7 @@ contract IClockAuction {
         uint256 _startingPriceInToken,
         uint256 _endingPriceInToken,
         uint256 _duration,
+        uint256 _startAt,
         address _token)
     public;
 
