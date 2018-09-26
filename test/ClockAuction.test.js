@@ -1,3 +1,8 @@
+const utils = require('./utils/time');
+const Web3 = require('web3');
+var web3 = new Web3(Web3.givenProvider);
+var increaseTime = utils.increaseTime;
+var increaseTimeTo = utils.increaseTimeTo;
 
 const SettingsRegistry = artifacts.require('SettingsRegistry');
 const ClaimBountyCalculator = artifacts.require('ClaimBountyCalculator');
@@ -23,8 +28,12 @@ const ContractIds = artifacts.require('ContractIds');
 const FeatureIds = artifacts.require('FeatureIds');
 
 const gasPrice = 30000000000000;
-
 const weight10Percent = 100000;
+const COIN = 10**18;
+// 4%
+const uint_auction_cut = 400;
+// 30 minutes
+const uint_auction_bid_waiting_time = 1800;
 
 
 var registry;
@@ -133,11 +142,11 @@ async function initBancor(accounts) {
     console.log('bancorExchange address: ', bancorExchange.address);
 
     //do this to make SmartToken.totalSupply > 0
-    await ring.issue(accounts[0], 1000000 * 10**18);
+    await ring.issue(accounts[0], 1000000 * COIN);
     await ring.setOwner(bancorConverter.address);
 
-    await etherToken.deposit({value: 1 * 10**18});
-    await etherToken.transfer(bancorConverter.address, 10**18);
+    await etherToken.deposit({value: 1 * COIN});
+    await etherToken.transfer(bancorConverter.address, 1 * COIN);
 
     await whiteList.addAddress(bancorExchange.address);
     await bancorConverter.setConversionWhitelist(whiteList.address);
@@ -247,6 +256,9 @@ async function initBancor(accounts) {
 
 contract('ClockAuction deployment', async(accounts) => {
 
+    let firstBidRecord;
+    let secondBidRebcord;
+
     before('deploy series contracts', async () => {
         await initBancor(accounts);
 
@@ -283,8 +295,8 @@ contract('ClockAuction deployment', async(accounts) => {
         await registry.setAddressProperty(await auctionSettingsId.CONTRACT_ATLANTIS_ERC721LAND.call(), atlantis.address);
         await registry.setAddressProperty(await auctionSettingsId.CONTRACT_LAND_DATA.call(), landGenesisData.address);
         // register uint
-        await registry.setUintProperty(await auctionSettingsId.UINT_AUCTION_CUT.call(), 400);
-        await registry.setUintProperty(await auctionSettingsId.UINT_AUCTION_BID_WAITING_TIME.call(), 1800);
+        await registry.setUintProperty(await auctionSettingsId.UINT_AUCTION_CUT.call(), uint_auction_cut);
+        await registry.setUintProperty(await auctionSettingsId.UINT_AUCTION_BID_WAITING_TIME.call(), uint_auction_bid_waiting_time);
 
         await landGenesisData.adminAddRole(mysteriousTreasure.address, await landGenesisData.ROLE_ADMIN.call());
 
@@ -297,10 +309,10 @@ contract('ClockAuction deployment', async(accounts) => {
 
     it('assign new land', async() => {
         await atlantis.assignNewLand(-101, 12, accounts[0]);
-        // let mintWatcher = atlantis.Transfer();
-        // let event = await mintWatcher.get();
-        // console.log('tokenId: ', event[2]);
         console.log('0x' + (await atlantis.tokenOfOwnerByIndex(accounts[0], 0)).toString(16));
+        // assgin new land to genesis holder
+        await atlantis.assignNewLand(-98, 5, genesisHolder.address);
+        console.log('0x' + (await atlantis.encodeTokenId(-98, 5)).toString(16));
     })
 
     it('create an auction', async() => {
@@ -311,29 +323,45 @@ contract('ClockAuction deployment', async(accounts) => {
         let owner = await atlantis.ownerOf(tokenId);
         assert.equal(owner, clockAuction.address);
 
-        let auction = await clockAuction.getAuction(tokenId);
-        verifyAuctionInitial(auction, accounts[0], 100000 * 10**18, 50000 * 10**18, 300, ring.address, 0, 0, 0);
+        let auction1 = await clockAuction.getAuction(tokenId);
+        verifyAuctionInitial(auction1, accounts[0], 100000 * COIN, 50000 * COIN, 300, ring.address, 0, 0, 0);
     })
 
     it('bid for auction', async() => {
         let tokenId = '0x' + (await atlantis.tokenOfOwnerByIndex(clockAuction.address, 0)).toString(16);
         console.log('tokenId in auction: ', tokenId);
-        assert((await ring.balanceOf(accounts[0])).valueOf() > 100000 * 10**18);
+        assert((await ring.balanceOf(accounts[0])).valueOf() > 100000 * COIN);
        // await RING.at(ring.address).contract.transfer['address,uint256,bytes'](accounts[1], 10 * 10**18, '0x0c', {from: accounts[0], gas: 300000});
-        await RING.at(ring.address).contract.transfer['address,uint256,bytes'](clockAuction.address, 100000 * 10**18, '0xffffffffffffffffffffffffffffff9b0000000000000000000000000000000c00000000000000000000000002A98FDb710Ea5611423cC1a62c0d6ecF88A4E2E', {from: accounts[0], gas:3000000});
+        await RING.at(ring.address).contract.transfer['address,uint256,bytes'](clockAuction.address, 100000 * COIN, '0xffffffffffffffffffffffffffffff9b0000000000000000000000000000000c00000000000000000000000002A98FDb710Ea5611423cC1a62c0d6ecF88A4E2E', {from: accounts[0], gas:3000000});
         console.log('balanceof clockauction: ', await ring.balanceOf(clockAuction.address));
         let auction = await clockAuction.getAuction(tokenId);
-        console.log('lastRecord: ', auction[6]);
-        verifyAuctionInBid(auction, accounts[0], 100000 * 10**18, 50000 * 10**18, 300, ring.address, accounts[0], accounts[1]);
+        firstBidRecord = auction[6];
+        verifyAuctionInBid(auction, accounts[0], 100000 * COIN, 50000 * COIN, 300, ring.address, accounts[0], accounts[1]);
     })
 
     it('bid with eth', async () => {
         let tokenId = '0x' + (await atlantis.tokenOfOwnerByIndex(clockAuction.address, 0)).toString(16);
-        await clockAuction.bidWithETH(tokenId, accounts[3], {from: accounts[2], value: 2 * 10**18});
+        let ringBalancePrev0 = await ring.balanceOf(accounts[0]);
+
+        await clockAuction.bidWithETH(tokenId, accounts[3], {from: accounts[2], value: 2 * COIN});
         let auction = await clockAuction.getAuction(tokenId);
-        console.log('last record 2nd: ', auction[6]);
-        verifyAuctionInBid(auction, accounts[0], 100000 * 10**18, 50000 * 10**18, 300, ring.address, accounts[2], accounts[3]);
+        secondBidRebcord = auction[6];
+        verifyAuctionInBid(auction, accounts[0], 100000 * COIN, 50000 * COIN, 300, ring.address, accounts[2], accounts[3]);
+        // require (lastrecord * 1.1 = thisrecord)
+        assert.equal(firstBidRecord * 1.1, secondBidRebcord);
+        let ringBalanceNow0 = await ring.balanceOf(accounts[0]);
+        assert(ringBalanceNow0.toNumber() > ringBalancePrev0.toNumber());
     })
+
+    it('claim land asset', async () => {
+        let tokenId = '0x' + (await atlantis.tokenOfOwnerByIndex(clockAuction.address, 0)).toString(16);
+        await increaseTime(uint_auction_bid_waiting_time);
+        await clockAuction.claimLandAsset(tokenId);
+        let owner = await atlantis.ownerOf(tokenId);
+        assert.equal(owner, accounts[2]);
+    })
+
+
 
 
 })
