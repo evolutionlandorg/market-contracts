@@ -52,14 +52,17 @@ contract ClockAuction is ClockAuctionBase {
         uint256 _startingPriceInToken,
         uint256 _endingPriceInToken,
         uint256 _duration,
+        uint256 _startAt,
         address _token)
-    public {
+    public
+    canBeStoredWith64Bits(_startAt) {
+
         require(msg.sender == pangu, "only pangu can call this");
 
         require(_startingPriceInToken <= 1000000000 * 10 ** 18 && _endingPriceInToken <= 1000000000 * 10**18);
         require(_duration <= 100 days);
         // pangu can only set its own as seller
-        _createAuction(msg.sender, _tokenId, _startingPriceInToken, _endingPriceInToken, _duration, msg.sender, _token);
+        _createAuction(msg.sender, _tokenId, _startingPriceInToken, _endingPriceInToken, _duration, _startAt, msg.sender, _token);
     }
 
     /// @dev Cancels an auction that hasn't been won yet.
@@ -107,8 +110,9 @@ contract ClockAuction is ClockAuctionBase {
             }
             require(startingPriceInRING <= 1000000000 * 10 ** 18 && endingPriceInRING <= 1000000000 * 10**18);
             require(duration <= 1000 days);
+            uint startAt = now;
             //TODO: add parameter _token
-            _createAuction(_from, _tokenId, startingPriceInRING, endingPriceInRING, duration, seller, address(RING));
+            _createAuction(_from, _tokenId, startingPriceInRING, endingPriceInRING, duration, startAt, seller, address(RING));
         }
 
     }
@@ -278,6 +282,7 @@ contract ClockAuction is ClockAuctionBase {
 
         // the first bid
         if (_auction.lastBidder == 0x0 && _priceInToken > 0) {
+            require(now >= uint256( _auction.startedAt));
             //  Calculate the auctioneer's cut.
             // (NOTE: computeCut() is guaranteed to return a
             //  value <= price, so this subtraction can't go negative.)

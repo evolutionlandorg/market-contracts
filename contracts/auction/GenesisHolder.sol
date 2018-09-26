@@ -33,6 +33,7 @@ contract GenesisHolder is Ownable, AuctionSettingIds {
         uint256 _startingPriceInToken,
         uint256 _endingPriceInToken,
         uint256 _duration,
+        uint256 _startAt,
         address _token)
     public
     onlyOwner {
@@ -48,7 +49,7 @@ contract GenesisHolder is Ownable, AuctionSettingIds {
         land.approve(address(auction), _tokenId);
         // create an auciton
         // have to set _seller to this
-        auction.createAuction(_tokenId,_startingPriceInToken, _endingPriceInToken, _duration, _token);
+        auction.createAuction(_tokenId,_startingPriceInToken, _endingPriceInToken, _duration,_startAt, _token);
     }
 
 

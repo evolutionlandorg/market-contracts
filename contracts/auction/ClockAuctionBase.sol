@@ -102,6 +102,7 @@ contract ClockAuctionBase is Pausable, AuctionSettingIds {
         uint256 _startingPriceInToken,
         uint256 _endingPriceInToken,
         uint256 _duration,
+        uint256 _startAt,
         address _seller,
         address _token
     )
@@ -110,6 +111,7 @@ contract ClockAuctionBase is Pausable, AuctionSettingIds {
     canBeStoredWith128Bits(_startingPriceInToken)
     canBeStoredWith128Bits(_endingPriceInToken)
     canBeStoredWith64Bits(_duration)
+    canBeStoredWith64Bits(_startAt)
     {
         require((nonFungibleContract.ownerOf(_tokenId) == _from), "you are not the owner, dont do this.");
 
@@ -121,7 +123,7 @@ contract ClockAuctionBase is Pausable, AuctionSettingIds {
             uint128(_startingPriceInToken),
             uint128(_endingPriceInToken),
             uint64(_duration),
-            uint64(now),
+            uint64(_startAt),
             //TODO: add auction.token
             _token,
             // which refer to lastRecord, lastBidder, lastBidStartAt,lastReferer
