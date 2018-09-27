@@ -76,7 +76,6 @@ module.exports = function(deployer) {
         await landGenesisData.adminAddRole(mysteriousTreasure.address, await landGenesisData.ROLE_ADMIN.call());
 
         await deployer.deploy(ClockAuction, Atlantis.address, GenesisHolder.address, registry.address);
-        console.log('clockAuction address: ', ClockAuction.address);
 
         await mysteriousTreasure.transferOwnership(ClockAuction.address);
         await registry.setAddressProperty(await auctionSettingsId.CONTRACT_CLOCK_AUCTION.call(), ClockAuction.address);
