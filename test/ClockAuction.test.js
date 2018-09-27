@@ -37,7 +37,6 @@ const uint_auction_bid_waiting_time = 1800;
 
 
 var registry;
-var ring;
 var claimBountyCalculator;
 var auctionSettingsId;
 var mysteriousTreasure;
@@ -51,6 +50,7 @@ var bancorConverter;
 var bancorFormula;
 var bancorGasPriceLimit;
 var etherToken;
+var ring;
 var contractFeatures;
 var contractRegistry;
 var whiteList;
