@@ -85,6 +85,6 @@ Atlantis: 0x8df7287914144d89adf44d8fdd0b72f4990fb2fc
 genesisHolder: 0x59ec5f5f80ff8ae02049eeeea149c2befa63772b
 BancorExchange: 0xe243c71d1531c356c8a7072979d4acc7362761ba
 LandGenesisDData: 0xaac0ff28c64e6f06728a5e1ce6239f5e3709cd42
-ClockAuction: 0x05ddf9e9d0459940c8616b1ff0790a243f1b1e41
+ClockAuction: 0x28535c4f895c4954be69e5d197f4a96dd23d544c
 RING: 0x6df4e0da83e47e3f6cd7d725224bc73f0e198c4f
 ```
