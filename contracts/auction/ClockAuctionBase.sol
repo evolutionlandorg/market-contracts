@@ -14,6 +14,7 @@ import "./interfaces/IBancorExchange.sol";
 /// @dev Contains models, variables, and internal methods for the auction.
 contract ClockAuctionBase is Pausable, AuctionSettingIds {
     using SafeMath for *;
+    uint constant COIN = 10**18;
 
     // Represents an auction on an NFT
     struct Auction {
@@ -212,7 +213,7 @@ contract ClockAuctionBase is Pausable, AuctionSettingIds {
             // as long as price_offered_by_buyer >= 1.1 * currentPice,
             // this buyer will be the lastBidder
             // 1.1 * (lastRecord - claimBounty) + claimBounty
-            return ( (11 * (uint256(_auction.lastRecord).sub(claimBounty)) / 10).add(claimBounty));
+            return ((11 * (uint256(_auction.lastRecord).sub(claimBounty)) / 10).add(claimBounty));
         }
 
     }

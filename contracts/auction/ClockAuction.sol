@@ -59,8 +59,8 @@ contract ClockAuction is ClockAuctionBase {
 
         require(msg.sender == pangu, "only pangu can call this");
 
-        require(_startingPriceInToken <= 1000000000 * 10 ** 18 && _endingPriceInToken <= 1000000000 * 10**18);
-        require(_duration <= 100 days);
+        require(_startingPriceInToken <= 1000000000 * COIN && _endingPriceInToken <= 1000000000 * COIN);
+        require(_duration <= 1000 days);
         // pangu can only set its own as seller
         _createAuction(msg.sender, _tokenId, _startingPriceInToken, _endingPriceInToken, _duration, _startAt, msg.sender, _token);
     }
@@ -108,7 +108,7 @@ contract ClockAuction is ClockAuctionBase {
                 duration := mload(add(ptr,196))
                 seller := mload(add(ptr,228))
             }
-            require(startingPriceInRING <= 1000000000 * 10 ** 18 && endingPriceInRING <= 1000000000 * 10**18);
+            require(startingPriceInRING <= 1000000000 * COIN && endingPriceInRING <= 1000000000 * COIN);
             require(duration <= 1000 days);
             uint startAt = now;
             //TODO: add parameter _token
@@ -156,8 +156,8 @@ contract ClockAuction is ClockAuctionBase {
         IBancorExchange bancorExchange = IBancorExchange(registry.addressOf(AuctionSettingIds.CONTRACT_BANCOR_EXCHANGE));
         uint256 ringFromETH = bancorExchange.buyRING.value(msg.value)(priceInRING);
 
-
-        uint refund = ringFromETH - priceInRING;
+        // double check
+        uint refund = ringFromETH.sub(priceInRING);
         if (refund > 0) {
             // if there is surplus RING
             // then give it back to the msg.sender
@@ -251,7 +251,7 @@ contract ClockAuction is ClockAuctionBase {
 
         uint claimBounty = claimBountyCalculator.tokenAmountForBounty(auction.token);
         // if Auction is sucessful, refererBounty is taken on by evolutionland
-        uint refererBounty = computeCut(lastRecord.sub(claimBounty) / 11, auctionCut);
+        uint refererBounty = computeCut((lastRecord.sub(claimBounty)) / 11, auctionCut);
 
         //prevent re-entry attack
         _removeAuction(_tokenId);
@@ -307,7 +307,7 @@ contract ClockAuction is ClockAuctionBase {
             // 1.1*price + bounty - (price + bounty) = 0.1price
             // we dont touch claimBounty
             uint extraForEach = (_priceInToken.sub(uint256(_auction.lastRecord))) / 2;
-            uint realReturn = extraForEach.sub(computeCut( extraForEach, auctionCut));
+            uint realReturn = extraForEach.sub(computeCut(extraForEach, auctionCut));
             if (_auction.lastReferer == 0x0) {
                 ERC20(_auction.token).transfer(_auction.seller, realReturn);
                 ERC20(_auction.token).transfer(_auction.lastBidder, (realReturn + uint256(_auction.lastRecord)));
