@@ -37,51 +37,55 @@ var BancorAddress = {
 
 var AuctionConf = {
     // 4%
-   uint_auction_cut: 400,
+    uint_auction_cut: 400,
     // 30 minutes
     uint_auction_bid_waiting_time: 1800,
     from: '0x4cc4c344eba849dc09ac9af4bff1977e44fc1d7e'
 }
 
-module.exports = function(deployer) {
-    deployer.deploy(SettingsRegistry);
-    deployer.deploy(AuctionSettingIds);
-    deployer.deploy(Atlantis);
-    deployer.deploy(ClaimBountyCalculator);
-    deployer.deploy(LandGenesisData).then( async() => {
-        let ring = await RING.at(BancorAddress.RING);
-        let registry = await SettingsRegistry.deployed();
+module.exports = function (deployer) {
+    if (deployer.network_id != 1234) {
 
-        await deployer.deploy(MysteriousTreasure,registry.address, [10439, 419, 5258, 12200, 12200]);
-        await deployer.deploy(GenesisHolder,registry.address, ring.address);
+        deployer.deploy(SettingsRegistry);
+        deployer.deploy(AuctionSettingIds);
+        deployer.deploy(Atlantis);
+        deployer.deploy(ClaimBountyCalculator);
+        deployer.deploy(LandGenesisData).then(async () => {
+            let ring = await RING.at(BancorAddress.RING);
+            let registry = await SettingsRegistry.deployed();
 
-        let auth_string = await registry.ROLE_AUTH_CONTROLLER.call();
-        await registry.adminAddRole(AuctionConf.from, auth_string);
+            await deployer.deploy(MysteriousTreasure, registry.address, [10439, 419, 5258, 12200, 12200]);
+            await deployer.deploy(GenesisHolder, registry.address, ring.address);
 
-        let auctionSettingsId = await AuctionSettingIds.deployed();
+            let auth_string = await registry.ROLE_AUTH_CONTROLLER.call();
+            await registry.adminAddRole(AuctionConf.from, auth_string);
 
-        // registry address in SettingsRegistry
-        await registry.setAddressProperty(await auctionSettingsId.CONTRACT_RING_ERC20_TOKEN.call(), ring.address);
-        await registry.setAddressProperty(await auctionSettingsId.CONTRACT_AUCTION_CLAIM_BOUNTY.call(), ClaimBountyCalculator.address);
-        await registry.setAddressProperty(await auctionSettingsId.CONTRACT_MYSTERIOUS_TREASURE.call(), MysteriousTreasure.address);
-        await registry.setAddressProperty(await auctionSettingsId.CONTRACT_BANCOR_EXCHANGE.call(), BancorAddress.BancorExchange);
-        await registry.setAddressProperty(await auctionSettingsId.CONTRACT_ATLANTIS_ERC721LAND.call(), Atlantis.address);
-        await registry.setAddressProperty(await auctionSettingsId.CONTRACT_LAND_DATA.call(), LandGenesisData.address);
-        // register uint
-        await registry.setUintProperty(await auctionSettingsId.UINT_AUCTION_CUT.call(), AuctionConf.uint_auction_cut);
-        await registry.setUintProperty(await auctionSettingsId.UINT_AUCTION_BID_WAITING_TIME.call(), AuctionConf.uint_auction_bid_waiting_time);
+            let auctionSettingsId = await AuctionSettingIds.deployed();
 
-        let mysteriousTreasure = await MysteriousTreasure.deployed();
-        let landGenesisData = await LandGenesisData.deployed();
-        await landGenesisData.adminAddRole(mysteriousTreasure.address, await landGenesisData.ROLE_ADMIN.call());
+            // registry address in SettingsRegistry
+            await registry.setAddressProperty(await auctionSettingsId.CONTRACT_RING_ERC20_TOKEN.call(), ring.address);
+            await registry.setAddressProperty(await auctionSettingsId.CONTRACT_AUCTION_CLAIM_BOUNTY.call(), ClaimBountyCalculator.address);
+            await registry.setAddressProperty(await auctionSettingsId.CONTRACT_MYSTERIOUS_TREASURE.call(), MysteriousTreasure.address);
+            await registry.setAddressProperty(await auctionSettingsId.CONTRACT_BANCOR_EXCHANGE.call(), BancorAddress.BancorExchange);
+            await registry.setAddressProperty(await auctionSettingsId.CONTRACT_ATLANTIS_ERC721LAND.call(), Atlantis.address);
+            await registry.setAddressProperty(await auctionSettingsId.CONTRACT_LAND_DATA.call(), LandGenesisData.address);
+            // register uint
+            await registry.setUintProperty(await auctionSettingsId.UINT_AUCTION_CUT.call(), AuctionConf.uint_auction_cut);
+            await registry.setUintProperty(await auctionSettingsId.UINT_AUCTION_BID_WAITING_TIME.call(), AuctionConf.uint_auction_bid_waiting_time);
 
-        await deployer.deploy(ClockAuction, Atlantis.address, GenesisHolder.address, registry.address);
+            let mysteriousTreasure = await MysteriousTreasure.deployed();
+            let landGenesisData = await LandGenesisData.deployed();
+            await landGenesisData.adminAddRole(mysteriousTreasure.address, await landGenesisData.ROLE_ADMIN.call());
 
-        await mysteriousTreasure.transferOwnership(ClockAuction.address);
-        await registry.setAddressProperty(await auctionSettingsId.CONTRACT_CLOCK_AUCTION.call(), ClockAuction.address);
+            await deployer.deploy(ClockAuction, Atlantis.address, GenesisHolder.address, registry.address);
 
-        console.log('SUCESS! ');
-    })
+            await mysteriousTreasure.transferOwnership(ClockAuction.address);
+            await registry.setAddressProperty(await auctionSettingsId.CONTRACT_CLOCK_AUCTION.call(), ClockAuction.address);
+
+            console.log('SUCESS! ');
+        })
+
+    }
 }
 
 

@@ -355,10 +355,29 @@ contract('ClockAuction deployment', async(accounts) => {
 
     it('claim land asset', async () => {
         let tokenId = '0x' + (await atlantis.tokenOfOwnerByIndex(clockAuction.address, 0)).toString(16);
+        assert.equal(await atlantis.ownerOf(tokenId), clockAuction.address);
+        console.log('token owner confirmed!')
+        let expireTime = ((await clockAuction.getAuction(tokenId))[8]).toNumber() + uint_auction_bid_waiting_time;
+        console.log('expire time: ', expireTime);
+        let  now = (await web3.eth.getBlock("latest")).timestamp;
+        console.log('now: ', now);
         await increaseTime(uint_auction_bid_waiting_time);
-        await clockAuction.claimLandAsset(tokenId);
-        let owner = await atlantis.ownerOf(tokenId);
-        assert.equal(owner, accounts[2]);
+        let increasedTime = (await web3.eth.getBlock("latest")).timestamp;
+        console.log('time after increasion: ', increasedTime);
+        assert((increasedTime - expireTime) >= 0, 'time increasion failed!')
+        assert.equal(await mysteriousTreasure.owner(), clockAuction.address, 'mysterious owner is not auction');
+
+        let newOwner = (await clockAuction.getAuction(tokenId))[7];
+        assert.equal(newOwner, accounts[2], 'new owner is now lastbidder');
+
+        console.log('has box in landdata: ', await landGenesisData.hasBox(tokenId));
+
+
+        await clockAuction.claimLandAsset(tokenId, {from: accounts[3]});
+        // let owner = await atlantis.ownerOf(tokenId);
+        // // assert.equal(owner, accounts[2]);
+        // console.log('owner: ', owner);
+
     })
 
 
