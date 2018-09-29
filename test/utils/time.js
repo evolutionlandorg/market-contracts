@@ -36,5 +36,6 @@ function latestTime () {
 
 module.exports = {
     increaseTime: increaseTime,
-    increaseTimeTo: increaseTimeTo
+    increaseTimeTo: increaseTimeTo,
+    latestTime: latestTime
 }

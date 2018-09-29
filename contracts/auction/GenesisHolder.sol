@@ -11,7 +11,10 @@ import "./AuctionSettingIds.sol";
 
 
 contract GenesisHolder is Ownable, AuctionSettingIds {
-    ISettingsRegistry public registry; 
+    ISettingsRegistry public registry;
+
+    // the account who creates auctions
+    address public operator;
 
     ERC20 public ring;
 
@@ -27,7 +30,6 @@ contract GenesisHolder is Ownable, AuctionSettingIds {
         _setRing(_ring);
     }
 
-
     function createAuction(
         uint256 _tokenId,
         uint256 _startingPriceInToken,
@@ -35,8 +37,10 @@ contract GenesisHolder is Ownable, AuctionSettingIds {
         uint256 _duration,
         uint256 _startAt,
         address _token)
-    public
-    onlyOwner {
+    public {
+
+        require(msg.sender == operator);
+
         ILandData landData = ILandData(registry.addressOf(SettingIds.CONTRACT_LAND_DATA));
         // reserved land do not allow ring for genesis auction
         if (landData.isReserved(_tokenId)) {
@@ -103,5 +107,9 @@ contract GenesisHolder is Ownable, AuctionSettingIds {
 
     function _setRing(address _ring) internal {
         ring = ERC20(_ring);
+    }
+
+    function setOperator(address _operator) public onlyOwner {
+        operator = _operator;
     }
 }
