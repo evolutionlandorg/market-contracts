@@ -367,16 +367,20 @@ contract('ClockAuction deployment', async(accounts) => {
         assert((increasedTime - expireTime) >= 0, 'time increasion failed!')
         assert.equal(await mysteriousTreasure.owner(), clockAuction.address, 'mysterious owner is not auction');
 
+        // get lastBidder
         let newOwner = (await clockAuction.getAuction(tokenId))[7];
+        console.log('lastBidder: ', newOwner);
         assert.equal(newOwner, accounts[2], 'new owner is now lastbidder');
+
+        let bounty = await claimBountyCalculator.tokenAmountForBounty(ring.address);
+        console.log('bounty: ', bounty.valueOf());
 
         console.log('has box in landdata: ', await landGenesisData.hasBox(tokenId));
 
-
         await clockAuction.claimLandAsset(tokenId, {from: accounts[3]});
-        // let owner = await atlantis.ownerOf(tokenId);
-        // // assert.equal(owner, accounts[2]);
-        // console.log('owner: ', owner);
+        let owner = await atlantis.ownerOf(tokenId);
+        assert.equal(owner, accounts[2]);
+        console.log('owner: ', owner);
 
     })
 
