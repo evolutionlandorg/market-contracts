@@ -7,6 +7,7 @@ contract AuctionSettingIds is SettingIds {
     bytes32 public constant CONTRACT_CLOCK_AUCTION = "CONTRACT_CLOCK_AUCTION";
 
     // Cut owner takes on each auction, measured in basis points (1/100 of a percent).
+    // this can be considered as transaction fee.
     // Values 0-10,000 map to 0%-100%
     // set ownerCut to 4%
     // ownerCut = 400;
@@ -28,5 +29,12 @@ contract AuctionSettingIds is SettingIds {
     // users change eth(in wei) into ring with bancor exchange
     // which introduce bancor protocol to regulate the price of ring
     bytes32 public constant CONTRACT_BANCOR_EXCHANGE = "BANCOR_EXCHANGE";
+
+    // Cut referer takes on each auction, measured in basis points (1/100 of a percent).
+    // which cut from transaction fee.
+    // Values 0-10,000 map to 0%-100%
+    // set refererCut to 4%
+    // refererCut = 400;
+    bytes32 public constant UINT_REFERER_CUT = "UINT_REFERER_CUT";
 
 }

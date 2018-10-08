@@ -6,7 +6,7 @@ import "./interfaces/IMysteriousTreasure.sol";
 contract ClockAuction is ClockAuctionBase {
 
     modifier isHuman() {
-        require (msg.sender == tx.origin, "robot is not permitted");
+        require(msg.sender == tx.origin, "robot is not permitted");
         _;
     }
 
@@ -19,14 +19,12 @@ contract ClockAuction is ClockAuctionBase {
     ///  and verifies the owner cut is in the valid range.
     /// @param _nftAddress - address of a deployed contract implementing
     ///  the Nonfungible Interface.
-    ///  _cut - percent cut the owner takes on each auction, must be
-    ///  between 0-10,000. It can be considered as transaction fee.
     ///  bidWaitingMinutes - biggest waiting time from a bid's starting to ending(in minutes)
     constructor(
         address _nftAddress,
         address _pangu,
         ISettingsRegistry _registry
-        )
+    )
     public {
         ERC721Basic candidateContract = ERC721Basic(_nftAddress);
         // InterfaceId_ERC721 = 0x80ac58cd;
@@ -76,10 +74,10 @@ contract ClockAuction is ClockAuctionBase {
 
         address seller = auction.seller;
         require((msg.sender == seller && !paused) || msg.sender == owner);
-        
+
         // once someone has bidden for this auction, no one has the right to cancel it.
         require(auction.lastBidder == 0x0);
-        _cancelAuction(_tokenId,seller);
+        _cancelAuction(_tokenId, seller);
     }
 
     //@dev only NFT contract can invoke this
@@ -101,10 +99,10 @@ contract ClockAuction is ClockAuctionBase {
             assembly {
                 let ptr := mload(0x40)
                 calldatacopy(ptr, 0, calldatasize)
-                startingPriceInRING := mload(add(ptr,132))
-                endingPriceInRING := mload(add(ptr,164))
-                duration := mload(add(ptr,196))
-                seller := mload(add(ptr,228))
+                startingPriceInRING := mload(add(ptr, 132))
+                endingPriceInRING := mload(add(ptr, 164))
+                duration := mload(add(ptr, 196))
+                seller := mload(add(ptr, 228))
             }
             require(startingPriceInRING <= 1000000000 * COIN && endingPriceInRING <= 1000000000 * COIN);
             require(duration <= 1000 days);
@@ -164,7 +162,7 @@ contract ClockAuction is ClockAuctionBase {
 
         IClaimBountyCalculator claimBountyCalculator = IClaimBountyCalculator(registry.addressOf(AuctionSettingIds.CONTRACT_AUCTION_CLAIM_BOUNTY));
         uint claimBounty = claimBountyCalculator.tokenAmountForBounty(auction.token);
-        uint bidMoment = _buyProcess(msg.sender, auction, priceInRING, _referer, claimBounty);
+        uint bidMoment = _bidProcess(msg.sender, auction, priceInRING, _referer, claimBounty);
 
         // Tell the world!
         // 0x0 refers to ETH
@@ -192,7 +190,7 @@ contract ClockAuction is ClockAuctionBase {
         IClaimBountyCalculator claimBountyCalculator = IClaimBountyCalculator(registry.addressOf(AuctionSettingIds.CONTRACT_AUCTION_CLAIM_BOUNTY));
         uint claimBounty = claimBountyCalculator.tokenAmountForBounty(auction.token);
 
-        uint bidMoment = _buyProcess(_from, auction, priceInToken, _referer, claimBounty);
+        uint bidMoment = _bidProcess(_from, auction, priceInToken, _referer, claimBounty);
 
         // Tell the world!
         emit NewBid(_tokenId, _from, _referer, priceInToken, auction.token, bidMoment);
@@ -219,7 +217,7 @@ contract ClockAuction is ClockAuctionBase {
         require(_isOnAuction(auction));
 
         if (msg.sender == auction.token) {
-                _bidWithToken(_from, tokenId, _valueInToken, referer);
+            _bidWithToken(_from, tokenId, _valueInToken, referer);
         }
     }
 
@@ -248,8 +246,6 @@ contract ClockAuction is ClockAuctionBase {
         IClaimBountyCalculator claimBountyCalculator = IClaimBountyCalculator(registry.addressOf(AuctionSettingIds.CONTRACT_AUCTION_CLAIM_BOUNTY));
 
         uint claimBounty = claimBountyCalculator.tokenAmountForBounty(auction.token);
-        // if Auction is sucessful, refererBounty is taken on by evolutionland
-        uint refererBounty = computeCut((lastRecord.sub(claimBounty)) / 200,  auctionCut);
 
         //prevent re-entry attack
         _removeAuction(_tokenId);
@@ -261,35 +257,36 @@ contract ClockAuction is ClockAuctionBase {
             require(token.transfer(msg.sender, claimBounty));
         }
 
-        if (lastReferer != 0x0) {
-            require(token.transfer(lastReferer, refererBounty));
-        }
-
         emit AuctionSuccessful(_tokenId, lastRecord, lastBidder);
     }
 
 
     // TODO: add _token to compatible backwards with ring and eth
-    function _buyProcess(address _buyer, Auction storage _auction, uint _priceInToken, address _referer, uint _claimBounty)
+    function _bidProcess(address _buyer, Auction storage _auction, uint _priceInToken, address _referer, uint _claimBounty)
     internal
     canBeStoredWith128Bits(_priceInToken)
     returns (uint256){
         uint priceWithoutBounty = _priceInToken.sub(_claimBounty);
-
         uint auctionCut = registry.uintOf(AuctionSettingIds.UINT_AUCTION_CUT);
+        uint256 refererCut = registry.uintOf(AuctionSettingIds.UINT_REFERER_CUT);
+
+        uint256 refererBounty;
 
         // the first bid
         if (_auction.lastBidder == 0x0 && _priceInToken > 0) {
-            require(now >= uint256( _auction.startedAt));
+            require(now >= uint256(_auction.startedAt));
             //  Calculate the auctioneer's cut.
             // (NOTE: computeCut() is guaranteed to return a
             //  value <= price, so this subtraction can't go negative.)
             // TODO: token to the seller
             // we dont touch claimBounty
-            uint256 sellerProceedsInToken = priceWithoutBounty - computeCut(priceWithoutBounty, auctionCut);
+            uint256 ownerCut = computeCut(priceWithoutBounty, auctionCut);
+
+            refererBounty = computeCut(ownerCut, refererCut);
 
             // transfer to the seller
-            ERC20(_auction.token).transfer(_auction.seller, sellerProceedsInToken);
+            ERC20(_auction.token).transfer(_auction.seller, (priceWithoutBounty - ownerCut));
+            ERC20(_auction.token).transfer(_referer, refererBounty);
         }
 
         // TODO: the math calculation needs further check
@@ -302,19 +299,18 @@ contract ClockAuction is ClockAuctionBase {
             // _priceInToken that is larger than lastRecord
             // was assured in _currentPriceInRING(_auction)
             // here double check
-            // 1.1*price + bounty - (price + bounty) = 0.1price
+            // 1.1*price + bounty - (price + bounty) = 0.1 * price
             // we dont touch claimBounty
-            uint extraForEach = (_priceInToken.sub(uint256(_auction.lastRecord))) / 2;
-            uint realReturn = extraForEach.sub(computeCut(extraForEach, auctionCut));
-            if (_auction.lastReferer == 0x0) {
-                ERC20(_auction.token).transfer(_auction.seller, realReturn);
-                ERC20(_auction.token).transfer(_auction.lastBidder, (realReturn + uint256(_auction.lastRecord)));
-            } else {
-                ERC20(_auction.token).transfer(_auction.seller, realReturn);
-                ERC20(_auction.token).transfer(_auction.lastBidder, ((9 * realReturn / 10) + uint256(_auction.lastRecord)));
-                ERC20(_auction.token).transfer(_auction.lastReferer, realReturn / 10);
-            }
+            uint extractFromGap = computeCut(_priceInToken.sub(uint256(_auction.lastRecord)), auctionCut);
+            uint realReturnForEach = extractFromGap / 2;
 
+            ERC20(_auction.token).transfer(_auction.seller, realReturnForEach);
+            ERC20(_auction.token).transfer(_auction.lastBidder, (realReturnForEach + uint256(_auction.lastRecord)));
+
+            if (_referer != 0x0) {
+                refererBounty = computeCut(extractFromGap, refererCut);
+                ERC20(_auction.token).transfer(_referer, refererBounty);
+            }
         }
 
         // modify bid-related member variables
@@ -343,7 +339,7 @@ contract ClockAuction is ClockAuctionBase {
         emit ClaimedTokens(_token, owner, balance);
     }
 
-        /// @dev Computes owner's cut of a sale.
+    /// @dev Computes owner's cut of a sale.
     /// @param _price - Sale price of NFT.
     function computeCut(uint256 _price, uint256 _cut) public pure returns (uint256) {
         // NOTE: We don't use SafeMath (or similar) in this function because
@@ -354,7 +350,7 @@ contract ClockAuction is ClockAuctionBase {
         return _price * _cut / 10000;
     }
 
-        /// @dev Returns auction info for an NFT on auction.
+    /// @dev Returns auction info for an NFT on auction.
     /// @param _tokenId - ID of NFT on auction.
     function getAuction(uint256 _tokenId)
     public
@@ -409,7 +405,7 @@ contract ClockAuction is ClockAuctionBase {
         bytes //_data
     )
     public
-    returns(bytes4) {
+    returns (bytes4) {
         return bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"));
     }
 

@@ -1,3 +1,6 @@
+/**
+ * test document: https://docs.google.com/spreadsheets/d/1iqsyrUixZPlZH1u4Ocfb_uV9n2JRiXRKAuJ3BWTC5Zs/edit#gid=0
+ */
 const utils = require('./utils/time');
 const Web3 = require('web3');
 var web3 = new Web3(Web3.givenProvider);
