@@ -39,8 +39,6 @@ contract ClockAuction is ClockAuctionBase {
         // NOTE: to make auction work well
         // set address of bancorExchange in registry first
         _setPangu(_pangu);
-
-
     }
 
     ///////////////////////
@@ -251,7 +249,7 @@ contract ClockAuction is ClockAuctionBase {
 
         uint claimBounty = claimBountyCalculator.tokenAmountForBounty(auction.token);
         // if Auction is sucessful, refererBounty is taken on by evolutionland
-        uint refererBounty = computeCut((lastRecord.sub(claimBounty)) / 11, auctionCut);
+        uint refererBounty = computeCut((lastRecord.sub(claimBounty)) / 200,  auctionCut);
 
         //prevent re-entry attack
         _removeAuction(_tokenId);

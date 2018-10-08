@@ -25,12 +25,7 @@ const uint_auction_cut = 400;
 const uint_auction_bid_waiting_time = 1800;
 
 
-var registry;
-var claimBountyCalculator;
-var auctionSettingsId;
-var mysteriousTreasure;
 var genesisHolder;
-var landGenesisData;
 var atlantis;
 var clockAuction;
 var ring;
@@ -68,13 +63,13 @@ contract('ClockAuction deployment', async(accounts) => {
     let firstBidRecord;
     let secondBidRecord;
 
+
     before('deploy series contracts', async () => {
         let initial = await initClockAuction(accounts);
         ring = initial.ring;
         clockAuction = initial.clockAuction;
         atlantis = initial.atlantis;
         genesisHolder = initial.genesisHolder;
-
     })
 
     it('assign new land', async() => {
@@ -125,7 +120,7 @@ contract('ClockAuction deployment', async(accounts) => {
         assert.equal(firstBidRecord * 1.1, secondBidRecord, 'bid amount is not required');
         let ringBalanceNow0 = await ring.balanceOf(accounts[0]);
         assert(ringBalanceNow0.toNumber() > ringBalancePrev0.toNumber());
-    })
+    });
 
     it('claim land asset', async () => {
         let tokenId = '0x' + (await atlantis.tokenOfOwnerByIndex(clockAuction.address, 0)).toString(16);
@@ -151,8 +146,7 @@ contract('ClockAuction deployment', async(accounts) => {
         let owner = await atlantis.ownerOf(tokenId);
         assert.equal(owner, accounts[2]);
         console.log('owner: ', owner);
-    })
-
+    });
 
 
 
