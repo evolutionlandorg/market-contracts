@@ -2,7 +2,7 @@
 const BancorInitialization = require('./BancorInitial');
 var initBancor = BancorInitialization.initBancor;
 
-const RING = artifacts.require('StandardERC223');
+const StandardERC223 = artifacts.require('StandardERC223');
 const SettingsRegistry = artifacts.require('SettingsRegistry');
 const ClaimBountyCalculator = artifacts.require('ClaimBountyCalculator');
 const AuctionSettingIds = artifacts.require('AuctionSettingIds');
@@ -10,13 +10,16 @@ const MysteriousTreasure = artifacts.require('MysteriousTreasure');
 const GenesisHolder = artifacts.require('GenesisHolder')
 const LandGenesisData = artifacts.require('LandGenesisData');
 const Atlantis = artifacts.require('Atlantis');
-const ClockAuction = artifacts.require('ClockAuction')
+const ClockAuction = artifacts.require('ClockAuction');
 
 const COIN = 10**18;
 // 4%
 const uint_auction_cut = 400;
 // 30 minutes
 const uint_auction_bid_waiting_time = 1800;
+
+// 20%
+const uint_referer_cut = 2000;
 
 module.exports = {
     initClockAuction: initClockAuction
@@ -43,6 +46,7 @@ async function initClockAuction(accounts) {
 
     let genesisHolder = await GenesisHolder.new(registry.address, ring.address);
     console.log('genesisHolder address: ', genesisHolder.address);
+    await genesisHolder.setOperator(accounts[1]);
 
     let claimBountyCalculator = await ClaimBountyCalculator.new();
     console.log('claimBountyCalculator address: ', claimBountyCalculator.address);
@@ -53,7 +57,7 @@ async function initClockAuction(accounts) {
     // register addresses part
     let ringId = await auctionSettingsId.CONTRACT_RING_ERC20_TOKEN.call();
     await registry.setAddressProperty(ringId, ring.address);
-    console.log('ringId: ', ringId);
+
     await registry.setAddressProperty(await auctionSettingsId.CONTRACT_AUCTION_CLAIM_BOUNTY.call(), claimBountyCalculator.address);
     await registry.setAddressProperty(await auctionSettingsId.CONTRACT_MYSTERIOUS_TREASURE.call(), mysteriousTreasure.address);
     await registry.setAddressProperty(await auctionSettingsId.CONTRACT_BANCOR_EXCHANGE.call(), bancorExchange.address);
@@ -62,6 +66,7 @@ async function initClockAuction(accounts) {
     // register uint
     await registry.setUintProperty(await auctionSettingsId.UINT_AUCTION_CUT.call(), uint_auction_cut);
     await registry.setUintProperty(await auctionSettingsId.UINT_AUCTION_BID_WAITING_TIME.call(), uint_auction_bid_waiting_time);
+    await registry.setUintProperty(await auctionSettingsId.UINT_REFERER_CUT.call(), uint_referer_cut);
 
     await landGenesisData.adminAddRole(mysteriousTreasure.address, await landGenesisData.ROLE_ADMIN.call());
 
@@ -71,10 +76,15 @@ async function initClockAuction(accounts) {
     await mysteriousTreasure.transferOwnership(clockAuction.address);
     await registry.setAddressProperty(await auctionSettingsId.CONTRACT_CLOCK_AUCTION.call(), clockAuction.address);
 
+    let kton = await StandardERC223.new('KTON');
+    console.log("Kton address: ", kton.address);
+
     return {
         clockAuction: clockAuction,
         atlantis: atlantis,
         ring: ring,
-        genesisHolder:genesisHolder
+        genesisHolder:genesisHolder,
+        landGenesisData: landGenesisData,
+        kton: kton
     }
 }

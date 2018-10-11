@@ -69,7 +69,7 @@ contract ClockAuctionBase is Pausable, AuctionSettingIds {
     event ClaimedTokens(address indexed token, address indexed owner, uint amount);
 
     // new bid event
-    event NewBid(uint256 indexed tokenId, address lastBidder, address lastReferer, uint256 lastRecord, address tokenAddress, uint256 bidStartAt);
+    event NewBid(uint256 indexed tokenId, address lastBidder, address lastReferer, uint256 lastRecord, address tokenAddress, uint256 bidStartAt, uint256 returnToLastBidder);
 
     // set claimBounty
     event ClaimBounty(address indexed _token, uint256 indexed _claimBounty);

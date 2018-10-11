@@ -162,12 +162,14 @@ contract ClockAuction is ClockAuctionBase {
 
         IClaimBountyCalculator claimBountyCalculator = IClaimBountyCalculator(registry.addressOf(AuctionSettingIds.CONTRACT_AUCTION_CLAIM_BOUNTY));
         uint claimBounty = claimBountyCalculator.tokenAmountForBounty(auction.token);
-        uint bidMoment = _bidProcess(msg.sender, auction, priceInRING, _referer, claimBounty);
+        uint bidMoment;
+        uint returnToLastBidder;
+        (bidMoment, returnToLastBidder) = _bidProcess(msg.sender, auction, priceInRING, _referer, claimBounty);
 
         // Tell the world!
         // 0x0 refers to ETH
         // NOTE: priceInRING, not priceInETH
-        emit NewBid(_tokenId, msg.sender, _referer, priceInRING, 0x0, bidMoment);
+        emit NewBid(_tokenId, msg.sender, _referer, priceInRING, 0x0, bidMoment, returnToLastBidder);
 
         return priceInRING;
     }
@@ -190,10 +192,12 @@ contract ClockAuction is ClockAuctionBase {
         IClaimBountyCalculator claimBountyCalculator = IClaimBountyCalculator(registry.addressOf(AuctionSettingIds.CONTRACT_AUCTION_CLAIM_BOUNTY));
         uint claimBounty = claimBountyCalculator.tokenAmountForBounty(auction.token);
 
-        uint bidMoment = _bidProcess(_from, auction, priceInToken, _referer, claimBounty);
+        uint bidMoment;
+        uint returnToLastBidder;
+        (bidMoment, returnToLastBidder) = _bidProcess(_from, auction, priceInToken, _referer, claimBounty);
 
         // Tell the world!
-        emit NewBid(_tokenId, _from, _referer, priceInToken, auction.token, bidMoment);
+        emit NewBid(_tokenId, _from, _referer, priceInToken, auction.token, bidMoment, returnToLastBidder);
 
         return priceInToken;
     }
@@ -265,12 +269,12 @@ contract ClockAuction is ClockAuctionBase {
     function _bidProcess(address _buyer, Auction storage _auction, uint _priceInToken, address _referer, uint _claimBounty)
     internal
     canBeStoredWith128Bits(_priceInToken)
-    returns (uint256){
+    returns (uint256, uint256){
         uint priceWithoutBounty = _priceInToken.sub(_claimBounty);
         uint auctionCut = registry.uintOf(AuctionSettingIds.UINT_AUCTION_CUT);
         uint256 refererCut = registry.uintOf(AuctionSettingIds.UINT_REFERER_CUT);
 
-        uint256 refererBounty;
+        // uint256 refererBounty;
 
         // the first bid
         if (_auction.lastBidder == 0x0 && _priceInToken > 0) {
@@ -282,11 +286,22 @@ contract ClockAuction is ClockAuctionBase {
             // we dont touch claimBounty
             uint256 ownerCut = computeCut(priceWithoutBounty, auctionCut);
 
-            refererBounty = computeCut(ownerCut, refererCut);
-
             // transfer to the seller
             ERC20(_auction.token).transfer(_auction.seller, (priceWithoutBounty - ownerCut));
-            ERC20(_auction.token).transfer(_referer, refererBounty);
+
+            if (_referer != 0x0) {
+                // refererBounty = computeCut(ownerCut, refererCut);
+                ERC20(_auction.token).transfer(_referer, computeCut(ownerCut, refererCut));
+            }
+
+
+            // modify bid-related member variables
+            _auction.lastBidder = _buyer;
+            _auction.lastRecord = uint128(_priceInToken);
+            _auction.lastBidStartAt = now;
+            _auction.lastReferer = _referer;
+
+            return (_auction.lastBidStartAt, 0);
         }
 
         // TODO: the math calculation needs further check
@@ -308,18 +323,19 @@ contract ClockAuction is ClockAuctionBase {
             ERC20(_auction.token).transfer(_auction.lastBidder, (realReturnForEach + uint256(_auction.lastRecord)));
 
             if (_referer != 0x0) {
-                refererBounty = computeCut(extractFromGap, refererCut);
-                ERC20(_auction.token).transfer(_referer, refererBounty);
+                // refererBounty = computeCut(extractFromGap, refererCut);
+                ERC20(_auction.token).transfer(_referer, computeCut(extractFromGap, refererCut));
             }
+
+            // modify bid-related member variables
+            _auction.lastBidder = _buyer;
+            _auction.lastRecord = uint128(_priceInToken);
+            _auction.lastBidStartAt = now;
+            _auction.lastReferer = _referer;
+
+            return (_auction.lastBidStartAt, (realReturnForEach + uint256(_auction.lastRecord)));
         }
 
-        // modify bid-related member variables
-        _auction.lastBidder = _buyer;
-        _auction.lastRecord = uint128(_priceInToken);
-        _auction.lastBidStartAt = now;
-        _auction.lastReferer = _referer;
-
-        return _auction.lastBidStartAt;
     }
 
 
