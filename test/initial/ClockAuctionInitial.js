@@ -25,6 +25,8 @@ module.exports = {
     initClockAuction: initClockAuction
 }
 
+// TODO: setAddressProperty for gold, wood, water, fire, and soil.
+
 async function initClockAuction(accounts) {
     let initial = await initBancor(accounts);
     let ring = initial.ring;
@@ -39,7 +41,7 @@ async function initClockAuction(accounts) {
     console.log('auctionSettingIds address: ', auctionSettingsId.address);
 
     let tokenOwnership = await TokenOwnership.new();
-    console.log('atlantis address: ', atlantis.address);
+    console.log('tokenOwnership address: ', tokenOwnership.address);
 
     let mysteriousTreasure = await MysteriousTreasure.new(registry.address, [10439, 419, 5258, 12200, 12200]);
     console.log('mysteriousTreasure address: ', mysteriousTreasure.address);
@@ -52,7 +54,7 @@ async function initClockAuction(accounts) {
     console.log('claimBountyCalculator address: ', claimBountyCalculator.address);
 
     let landBase = await LandBase.new();
-    console.log('landGenesisData address: ', landGenesisData.address);
+    console.log('landBase address: ', landBase.address);
 
     // register addresses part
     let ringId = await auctionSettingsId.CONTRACT_RING_ERC20_TOKEN.call();
@@ -70,7 +72,7 @@ async function initClockAuction(accounts) {
 
     await landBase.adminAddRole(mysteriousTreasure.address, await landGenesisData.ROLE_ADMIN.call());
 
-    let clockAuction = await ClockAuction.new(atlantis.address, genesisHolder.address, registry.address);
+    let clockAuction = await ClockAuction.new(tokenOwnership.address, genesisHolder.address, registry.address);
     console.log('clockAuction address: ', clockAuction.address);
 
     await mysteriousTreasure.transferOwnership(clockAuction.address);
@@ -81,10 +83,10 @@ async function initClockAuction(accounts) {
 
     return {
         clockAuction: clockAuction,
-        atlantis: atlantis,
+        tokenOwnership: tokenOwnership,
         ring: ring,
         genesisHolder:genesisHolder,
-        landGenesisData: landGenesisData,
+        landBase: landBase,
         kton: kton
     }
 }

@@ -4,7 +4,6 @@ import "@evolutionland/common/contracts/SettingsRegistry.sol";
 import "@evolutionland/common/contracts/StandardERC223.sol";
 import "@evolutionland/common/contracts/TokenOwnership.sol";
 import "@evolutionland/land/contracts/LandBase.sol";
-
 import "@evolutionland/bancor/solidity/contracts/converter/BancorConverter.sol";
 import "@evolutionland/bancor/solidity/contracts/converter/BancorFormula.sol";
 import "@evolutionland/bancor/solidity/contracts/converter/BancorGasPriceLimit.sol";
