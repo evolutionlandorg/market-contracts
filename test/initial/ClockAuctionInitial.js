@@ -8,9 +8,9 @@ const ClaimBountyCalculator = artifacts.require('ClaimBountyCalculator');
 const AuctionSettingIds = artifacts.require('AuctionSettingIds');
 const MysteriousTreasure = artifacts.require('MysteriousTreasure');
 const GenesisHolder = artifacts.require('GenesisHolder')
-const LandGenesisData = artifacts.require('LandGenesisData');
-const Atlantis = artifacts.require('Atlantis');
-const ClockAuction = artifacts.require('ClockAuction')
+const LandBase = artifacts.require('LandBase');
+const TokenOwnership = artifacts.require('TokenOwnership');
+const ClockAuction = artifacts.require('ClockAuction');
 
 const COIN = 10**18;
 // 4%
@@ -35,7 +35,7 @@ async function initClockAuction(accounts) {
     let auctionSettingsId = await AuctionSettingIds.new();
     console.log('auctionSettingIds address: ', auctionSettingsId.address);
 
-    let atlantis = await Atlantis.new();
+    let tokenOwnership = await TokenOwnership.new();
     console.log('atlantis address: ', atlantis.address);
 
     let mysteriousTreasure = await MysteriousTreasure.new(registry.address, [10439, 419, 5258, 12200, 12200]);
@@ -47,7 +47,7 @@ async function initClockAuction(accounts) {
     let claimBountyCalculator = await ClaimBountyCalculator.new();
     console.log('claimBountyCalculator address: ', claimBountyCalculator.address);
 
-    let landGenesisData = await LandGenesisData.new();
+    let landBase = await LandBase.new();
     console.log('landGenesisData address: ', landGenesisData.address);
 
     // register addresses part
@@ -57,13 +57,13 @@ async function initClockAuction(accounts) {
     await registry.setAddressProperty(await auctionSettingsId.CONTRACT_AUCTION_CLAIM_BOUNTY.call(), claimBountyCalculator.address);
     await registry.setAddressProperty(await auctionSettingsId.CONTRACT_MYSTERIOUS_TREASURE.call(), mysteriousTreasure.address);
     await registry.setAddressProperty(await auctionSettingsId.CONTRACT_BANCOR_EXCHANGE.call(), bancorExchange.address);
-    await registry.setAddressProperty(await auctionSettingsId.CONTRACT_ATLANTIS_ERC721LAND.call(), atlantis.address);
-    await registry.setAddressProperty(await auctionSettingsId.CONTRACT_LAND_DATA.call(), landGenesisData.address);
+    await registry.setAddressProperty(await auctionSettingsId.CONTRACT_TOKEN_OWNERSHIP.call(), tokenOwnership.address);
+    await registry.setAddressProperty(await auctionSettingsId.CONTRACT_LAND_BASE.call(), landBase.address);
     // register uint
     await registry.setUintProperty(await auctionSettingsId.UINT_AUCTION_CUT.call(), uint_auction_cut);
     await registry.setUintProperty(await auctionSettingsId.UINT_AUCTION_BID_WAITING_TIME.call(), uint_auction_bid_waiting_time);
 
-    await landGenesisData.adminAddRole(mysteriousTreasure.address, await landGenesisData.ROLE_ADMIN.call());
+    await landBase.adminAddRole(mysteriousTreasure.address, await landGenesisData.ROLE_ADMIN.call());
 
     let clockAuction = await ClockAuction.new(atlantis.address, genesisHolder.address, registry.address);
     console.log('clockAuction address: ', clockAuction.address);

@@ -3,8 +3,8 @@ const ClaimBountyCalculator = artifacts.require('ClaimBountyCalculator');
 const AuctionSettingIds = artifacts.require('AuctionSettingIds');
 const MysteriousTreasure = artifacts.require('MysteriousTreasure');
 const GenesisHolder = artifacts.require('GenesisHolder')
-const LandGenesisData = artifacts.require('LandGenesisData');
-const Atlantis = artifacts.require('Atlantis');
+const LandBase = artifacts.require('LandBase');
+const TokenOwnership = artifacts.require('TokenOwnership');
 const ClockAuction = artifacts.require('ClockAuction')
 
 // bancor related
@@ -48,9 +48,9 @@ module.exports = function (deployer) {
 
         deployer.deploy(SettingsRegistry);
         deployer.deploy(AuctionSettingIds);
-        deployer.deploy(Atlantis);
+        deployer.deploy(TokenOwnership);
         deployer.deploy(ClaimBountyCalculator);
-        deployer.deploy(LandGenesisData).then(async () => {
+        deployer.deploy(LandBase).then(async () => {
             let ring = await RING.at(BancorAddress.RING);
             let registry = await SettingsRegistry.deployed();
 
@@ -67,8 +67,8 @@ module.exports = function (deployer) {
             await registry.setAddressProperty(await auctionSettingsId.CONTRACT_AUCTION_CLAIM_BOUNTY.call(), ClaimBountyCalculator.address);
             await registry.setAddressProperty(await auctionSettingsId.CONTRACT_MYSTERIOUS_TREASURE.call(), MysteriousTreasure.address);
             await registry.setAddressProperty(await auctionSettingsId.CONTRACT_BANCOR_EXCHANGE.call(), BancorAddress.BancorExchange);
-            await registry.setAddressProperty(await auctionSettingsId.CONTRACT_ATLANTIS_ERC721LAND.call(), Atlantis.address);
-            await registry.setAddressProperty(await auctionSettingsId.CONTRACT_LAND_DATA.call(), LandGenesisData.address);
+            await registry.setAddressProperty(await auctionSettingsId.CONTRACT_TOKEN_OWNERSHIP.call(), TokenOwnership.address);
+            await registry.setAddressProperty(await auctionSettingsId.CONTRACT_LAND_BASE.call(), LandBase.address);
             // register uint
             await registry.setUintProperty(await auctionSettingsId.UINT_AUCTION_CUT.call(), AuctionConf.uint_auction_cut);
             await registry.setUintProperty(await auctionSettingsId.UINT_AUCTION_BID_WAITING_TIME.call(), AuctionConf.uint_auction_bid_waiting_time);
