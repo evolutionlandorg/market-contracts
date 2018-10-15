@@ -277,7 +277,7 @@ contract('ClockAuction deployment', async(accounts) => {
     //     console.log('lastBidder: ', newOwner);
     //     assert.equal(newOwner, accounts[2], 'new owner is now lastbidder');
     //
-    //     // console.log('has box in landdata: ', await landGenesisData.hasBox(tokenId));
+    //     // console.log('has box in landdata: ', await landGenesisData.isHasBox(tokenId));
     //
     //     await clockAuction.claimLandAsset(tokenId, {from: accounts[3]});
     //     let owner = await atlantis.ownerOf(tokenId);

@@ -38,7 +38,7 @@ contract MysteriousTreasure is Ownable, AuctionSettingIds {
     onlyOwner
     returns (uint, uint, uint, uint, uint) {
         ILandBase landBase = ILandBase(registry.addressOf(SettingIds.CONTRACT_LAND_BASE));
-        if(! landBase.hasBox(_tokenId) ) {
+        if(! landBase.isHasBox(_tokenId) ) {
             return (0,0,0,0,0);
         }
 
