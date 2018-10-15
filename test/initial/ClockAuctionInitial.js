@@ -9,7 +9,7 @@ const AuctionSettingIds = artifacts.require('AuctionSettingIds');
 const MysteriousTreasure = artifacts.require('MysteriousTreasure');
 const GenesisHolder = artifacts.require('GenesisHolder')
 const LandBase = artifacts.require('LandBase');
-const TokenOwnership = artifacts.require('TokenOwnership');
+const ObjectOwnership = artifacts.require('ObjectOwnership');
 const ClockAuction = artifacts.require('ClockAuction');
 
 const COIN = 10**18;
@@ -40,8 +40,8 @@ async function initClockAuction(accounts) {
     let auctionSettingsId = await AuctionSettingIds.new();
     console.log('auctionSettingIds address: ', auctionSettingsId.address);
 
-    let tokenOwnership = await TokenOwnership.new();
-    console.log('tokenOwnership address: ', tokenOwnership.address);
+    let objectOwnership = await ObjectOwnership.new();
+    console.log('objectOwnership address: ', objectOwnership.address);
 
     let mysteriousTreasure = await MysteriousTreasure.new(registry.address, [10439, 419, 5258, 12200, 12200]);
     console.log('mysteriousTreasure address: ', mysteriousTreasure.address);
@@ -63,7 +63,7 @@ async function initClockAuction(accounts) {
     await registry.setAddressProperty(await auctionSettingsId.CONTRACT_AUCTION_CLAIM_BOUNTY.call(), claimBountyCalculator.address);
     await registry.setAddressProperty(await auctionSettingsId.CONTRACT_MYSTERIOUS_TREASURE.call(), mysteriousTreasure.address);
     await registry.setAddressProperty(await auctionSettingsId.CONTRACT_BANCOR_EXCHANGE.call(), bancorExchange.address);
-    await registry.setAddressProperty(await auctionSettingsId.CONTRACT_TOKEN_OWNERSHIP.call(), tokenOwnership.address);
+    await registry.setAddressProperty(await auctionSettingsId.CONTRACT_TOKEN_OWNERSHIP.call(), objectOwnership.address);
     await registry.setAddressProperty(await auctionSettingsId.CONTRACT_LAND_BASE.call(), landBase.address);
     // register uint
     await registry.setUintProperty(await auctionSettingsId.UINT_AUCTION_CUT.call(), uint_auction_cut);
@@ -72,7 +72,7 @@ async function initClockAuction(accounts) {
 
     await landBase.adminAddRole(mysteriousTreasure.address, await landGenesisData.ROLE_ADMIN.call());
 
-    let clockAuction = await ClockAuction.new(tokenOwnership.address, genesisHolder.address, registry.address);
+    let clockAuction = await ClockAuction.new(objectOwnership.address, genesisHolder.address, registry.address);
     console.log('clockAuction address: ', clockAuction.address);
 
     await mysteriousTreasure.transferOwnership(clockAuction.address);
@@ -83,7 +83,7 @@ async function initClockAuction(accounts) {
 
     return {
         clockAuction: clockAuction,
-        tokenOwnership: tokenOwnership,
+        objectOwnership: objectOwnership,
         ring: ring,
         genesisHolder:genesisHolder,
         landBase: landBase,
