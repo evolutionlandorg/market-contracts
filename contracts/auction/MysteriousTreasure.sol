@@ -2,8 +2,8 @@ pragma solidity ^0.4.23;
 
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "@evolutionland/common/contracts/interfaces/ILandData.sol";
 import "@evolutionland/common/contracts/interfaces/ISettingsRegistry.sol";
+import "@evolutionland/land/contracts/interfaces/ILandBase.sol";
 import "./AuctionSettingIds.sol";
 
 contract MysteriousTreasure is Ownable, AuctionSettingIds {
@@ -37,38 +37,35 @@ contract MysteriousTreasure is Ownable, AuctionSettingIds {
     public
     onlyOwner
     returns (uint, uint, uint, uint, uint) {
-        ILandData landData = ILandData(registry.addressOf(SettingIds.CONTRACT_LAND_DATA));
-        if(! landData.hasBox(_tokenId) ) {
+        ILandBase landBase = ILandBase(registry.addressOf(SettingIds.CONTRACT_LAND_BASE));
+        if(! landBase.isHasBox(_tokenId) ) {
             return (0,0,0,0,0);
         }
-
-        //resourcesExist[0, 4] is gold,wood,water,fire,soil resources rate's limit
-        // resourcesExist[5] is flag, and not used
-        uint[6] memory resourcesExist;
-        (resourcesExist[0],resourcesExist[1],resourcesExist[2],resourcesExist[3],
-        resourcesExist[4],resourcesExist[5]) = landData.getDetailsFromLandInfo(_tokenId);
 
         uint[5] memory resourcesReward;
         (resourcesReward[0], resourcesReward[1],
         resourcesReward[2], resourcesReward[3], resourcesReward[4]) = _computeReward();
 
+        address resouceToken = registry.addressOf(SettingIds.CONTRACT_GOLD_ERC20_TOKEN);
+        landBase.modifyResourceRate(_tokenId, resouceToken, landBase.getResourceRate(_tokenId, resouceToken) + resourcesReward[0]);
 
-        // TODO: need add reward box to landData's admin roles;
-        landData.batchModifyResources(_tokenId,
-            resourcesReward[0] + resourcesExist[0],
-            resourcesReward[1] + resourcesExist[1],
-            resourcesReward[2] + resourcesExist[2],
-            resourcesReward[3] + resourcesExist[3],
-            resourcesReward[4] + resourcesExist[4]
-        );
+        resouceToken = registry.addressOf(SettingIds.CONTRACT_WOOD_ERC20_TOKEN);
+        landBase.modifyResourceRate(_tokenId, resouceToken, landBase.getResourceRate(_tokenId, resouceToken) + resourcesReward[1]);
+
+        resouceToken = registry.addressOf(SettingIds.CONTRACT_WATER_ERC20_TOKEN);
+        landBase.modifyResourceRate(_tokenId, resouceToken, landBase.getResourceRate(_tokenId, resouceToken) + resourcesReward[2]);
+
+        resouceToken = registry.addressOf(SettingIds.CONTRACT_FIRE_ERC20_TOKEN);
+        landBase.modifyResourceRate(_tokenId, resouceToken, landBase.getResourceRate(_tokenId, resouceToken) + resourcesReward[3]);
+
+        resouceToken = registry.addressOf(SettingIds.CONTRACT_SOIL_ERC20_TOKEN);
+        landBase.modifyResourceRate(_tokenId, resouceToken, landBase.getResourceRate(_tokenId, resouceToken) + resourcesReward[4]);
 
         // only record increment of resources
-        emit Unbox(_tokenId, resourcesReward[0], resourcesReward[1], resourcesReward[2],
-            resourcesReward[3], resourcesReward[4]);
+        emit Unbox(_tokenId, resourcesReward[0], resourcesReward[1], resourcesReward[2], resourcesReward[3], resourcesReward[4]);
 
-        // after unboxing, set hasBox(tokenId) to false
-        // to restrict unboxing
-        landData.modifyAttributes(_tokenId, 80, 95, 0);
+        // after unboxing, set hasBox(tokenId) to false to restrict unboxing
+        landBase.setHasBox(_tokenId, false);
 
         return (resourcesReward[0], resourcesReward[1], resourcesReward[2], resourcesReward[3], resourcesReward[4]);
     }

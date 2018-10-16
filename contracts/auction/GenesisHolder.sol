@@ -4,8 +4,8 @@ import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "openzeppelin-solidity/contracts/token/ERC721/ERC721Basic.sol";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "@evolutionland/common/contracts/interfaces/ISettingsRegistry.sol";
-import "@evolutionland/common/contracts/interfaces/ILandData.sol";
-import '@evolutionland/common/contracts/interfaces/IBurnableERC20.sol';
+import "@evolutionland/common/contracts/interfaces/IBurnableERC20.sol";
+import "@evolutionland/land/contracts/interfaces/ILandBase.sol";
 import "./interfaces/IClockAuction.sol";
 import "./AuctionSettingIds.sol";
 
@@ -41,16 +41,16 @@ contract GenesisHolder is Ownable, AuctionSettingIds {
 
         require(msg.sender == operator);
 
-        ILandData landData = ILandData(registry.addressOf(SettingIds.CONTRACT_LAND_DATA));
+        ILandBase landBase = ILandBase(registry.addressOf(SettingIds.CONTRACT_LAND_BASE));
         // reserved land do not allow ring for genesis auction
-        if (landData.isReserved(_tokenId)) {
+        if (landBase.isReserved(_tokenId)) {
             require(_token != address(ring));
         }
 
         IClockAuction auction = IClockAuction(registry.addressOf(AuctionSettingIds.CONTRACT_CLOCK_AUCTION));
-        ERC721Basic land = ERC721Basic(registry.addressOf(SettingIds.CONTRACT_ATLANTIS_ERC721LAND));
+        ERC721Basic tokenOwnership = ERC721Basic(registry.addressOf(SettingIds.CONTRACT_TOKEN_OWNERSHIP));
         // aprove land to auction contract
-        land.approve(address(auction), _tokenId);
+        tokenOwnership.approve(address(auction), _tokenId);
         // create an auciton
         // have to set _seller to this
         auction.createAuction(_tokenId,_startingPriceInToken, _endingPriceInToken, _duration,_startAt, _token);
