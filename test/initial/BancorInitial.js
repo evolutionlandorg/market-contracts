@@ -65,7 +65,10 @@ async function initBancor(accounts) {
     console.log('bancorExchange address: ', bancorExchange.address);
 
     //do this to make SmartToken.totalSupply > 0
-    await ring.issue(accounts[0], 1000000 * COIN);
+    for(let i = 0; i < 10; i++) {
+        await ring.issue(accounts[i], 100000 * COIN);
+    }
+
     await ring.setOwner(bancorConverter.address);
 
     await etherToken.deposit({value: 1 * COIN});

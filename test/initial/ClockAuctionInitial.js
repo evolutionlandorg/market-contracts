@@ -79,6 +79,10 @@ async function initClockAuction(accounts) {
     let kton = await StandardERC223.new('KTON');
     console.log("Kton address: ", kton.address);
 
+    for(let i = 0; i < 10; i++) {
+        await kton.issue(accounts[i], 100000 * COIN);
+    }
+
     return {
         clockAuction: clockAuction,
         atlantis: atlantis,

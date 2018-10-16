@@ -220,9 +220,9 @@ contract ClockAuction is ClockAuctionBase {
         Auction storage auction = tokenIdToAuction[tokenId];
         require(_isOnAuction(auction));
 
-        if (msg.sender == auction.token) {
-            _bidWithToken(_from, tokenId, _valueInToken, referer);
-        }
+        // safer for users
+        require (msg.sender == auction.token);
+        _bidWithToken(_from, tokenId, _valueInToken, referer);
     }
 
     // TODO: advice: offer some reward for the person who claimed

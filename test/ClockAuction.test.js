@@ -21,7 +21,7 @@ const Atlantis = artifacts.require('Atlantis');
 const ClockAuction = artifacts.require('ClockAuction');
 
 
-const COIN = 10**18;
+const COIN = 10 ** 18;
 // 4%
 const uint_auction_cut = 400;
 // 30 minutes
@@ -44,7 +44,6 @@ function generateCreateData(startingPrice, endingPrice, duration, seller) {
 
 function generateBidData(tokenId, referer) {
     let bidData = web3.utils.toTwosComplement(tokenId) + web3.utils.padLeft(referer, 64, '0').substring(2);
-    console.log("LOGGING BID DATA: ", bidData);
     return bidData;
 }
 
@@ -74,7 +73,7 @@ function verifyAuctionInBid(auction, seller, startingPrice, endingPrice, duratio
 }
 
 
-contract('ClockAuction deployment', async(accounts) => {
+contract('ClockAuction deployment', async (accounts) => {
 
     let firstBidRecord;
     let secondBidRecord;
@@ -84,6 +83,9 @@ contract('ClockAuction deployment', async(accounts) => {
     let genesisReserveLand;
     let commonLand;
     let notExitLand = 1;
+
+    let firstBidLandInRing;
+    let firstBidLandInETH;
 
 
     before('deploy series contracts', async () => {
@@ -95,8 +97,10 @@ contract('ClockAuction deployment', async(accounts) => {
         landGenesisData = initial.landGenesisData;
         kton = initial.kton;
 
+        await kton.mint(accounts[0], 100000 * COIN);
+
         genesisCommonLandOne = await atlantis.encodeTokenId(-99, 10);
-        genesisCommonLandTwo = await atlantis.encodeTokenId(-99,11);
+        genesisCommonLandTwo = await atlantis.encodeTokenId(-99, 11);
         genesisReserveLand = await atlantis.encodeTokenId(-100, 0);
         commonLand = await atlantis.encodeTokenId(-101, 2);
 
@@ -115,7 +119,7 @@ contract('ClockAuction deployment', async(accounts) => {
         await atlantis.approveAndCall(clockAuction.address, commonLand, auctionData);
         assert.equal(await atlantis.ownerOf(commonLand), clockAuction.address);
         let auction = await clockAuction.getAuction(commonLand);
-        verifyAuctionInitial(auction, accounts[0], 100*COIN, 10*COIN, 60, ring.address, 0, 0, 0);
+        verifyAuctionInitial(auction, accounts[0], 100 * COIN, 10 * COIN, 60, ring.address, 0, 0, 0);
     })
 
     it('[create-dsw-02], common people create auction which already created', async () => {
@@ -128,18 +132,18 @@ contract('ClockAuction deployment', async(accounts) => {
         }
     })
 
-    it('[create-dsw-03], common people use createAuction function', async() => {
+    it('[create-dsw-03], common people use createAuction function', async () => {
         try {
-            await clockAuction.createAuction(commonLand, 100*COIN, 10*COIN, 60, Date.now() / 1000, ring.address);
+            await clockAuction.createAuction(commonLand, 100 * COIN, 10 * COIN, 60, Date.now() / 1000, ring.address);
             assert(false, "did not throw.")
         } catch (err) {
             utils.ensureException(err);
         }
     })
 
-    it('[create-dsw-04], genesisHolder create auction when land does not exist', async() => {
+    it('[create-dsw-04], genesisHolder create auction when land does not exist', async () => {
         try {
-            await genesisHolder.createAuction(notExitLand, 100*COIN, 10*COIN, 60, Date.now() / 1000, ring.address);
+            await genesisHolder.createAuction(notExitLand, 100 * COIN, 10 * COIN, 60, Date.now() / 1000, ring.address);
             assert(false, "did not throw.")
         } catch (err) {
             utils.ensureException(err);
@@ -148,24 +152,24 @@ contract('ClockAuction deployment', async(accounts) => {
 
     it('[create-dsw-05], genesisHolder create auction', async () => {
         assert.equal(await atlantis.ownerOf(genesisCommonLandOne), genesisHolder.address, 'this land does not belong to genesisHolder');
-        await genesisHolder.createAuction(genesisCommonLandOne, 100*COIN, 10*COIN, 60, Date.now() / 1000, ring.address, {from: accounts[1]});
+        await genesisHolder.createAuction(genesisCommonLandOne, 100 * COIN, 10 * COIN, 60, Date.now() / 1000, ring.address, {from: accounts[1]});
         assert.equal(await atlantis.ownerOf(genesisCommonLandOne), clockAuction.address, 'auction creation failed.');
         let auction = await clockAuction.getAuction(genesisCommonLandOne);
-        verifyAuctionInitial(auction, genesisHolder.address, 100*COIN, 10*COIN, 60, ring.address, 0, 0, 0);
+        verifyAuctionInitial(auction, genesisHolder.address, 100 * COIN, 10 * COIN, 60, ring.address, 0, 0, 0);
     })
 
-    it('[create-dsw-06], genesisHolder create auction which already created', async() => {
+    it('[create-dsw-06], genesisHolder create auction which already created', async () => {
         try {
-            await genesisHolder.createAuction(genesisCommonLandOne, 100*COIN, 10*COIN, 60, Date.now() / 1000, ring.address, {from: accounts[1]});
+            await genesisHolder.createAuction(genesisCommonLandOne, 100 * COIN, 10 * COIN, 60, Date.now() / 1000, ring.address, {from: accounts[1]});
             assert(false, "did not throw.")
         } catch (err) {
             utils.ensureException(err);
         }
     })
 
-    it('[create-dsw-07], genesisHolder create auction while msg.sender is not operator', async() => {
+    it('[create-dsw-07], genesisHolder create auction while msg.sender is not operator', async () => {
         try {
-            await genesisHolder.createAuction(genesisCommonLandTwo, 100*COIN, 10*COIN, 60, Date.now() / 1000, ring.address, {from: accounts[0]});
+            await genesisHolder.createAuction(genesisCommonLandTwo, 100 * COIN, 10 * COIN, 60, Date.now() / 1000, ring.address, {from: accounts[0]});
             assert(false, "did not throw.")
         } catch (err) {
             utils.ensureException(err);
@@ -174,7 +178,7 @@ contract('ClockAuction deployment', async(accounts) => {
 
     it('[create-dsw-08], genesisHolder create auction which land is reserved but token is set to ring', async () => {
         try {
-            await genesisHolder.createAuction(genesisReserveLand, 100*COIN, 10*COIN, 60, Date.now() / 1000, ring.address, {from: accounts[1]});
+            await genesisHolder.createAuction(genesisReserveLand, 100 * COIN, 10 * COIN, 60, Date.now() / 1000, ring.address, {from: accounts[1]});
             assert(false, "did not throw.")
         } catch (err) {
             utils.ensureException(err);
@@ -182,39 +186,105 @@ contract('ClockAuction deployment', async(accounts) => {
     })
 
     it('[create-dsw-09], genesisHolder create auction and set auction.token to kton', async () => {
-        await genesisHolder.createAuction(genesisReserveLand, 100*COIN, 10*COIN, 60, Date.now() / 1000, kton.address, {from: accounts[1]});
+        await genesisHolder.createAuction(genesisReserveLand, 100 * COIN, 10 * COIN, 60, Date.now() / 1000, kton.address, {from: accounts[1]});
         let auction = await clockAuction.getAuction(genesisReserveLand);
-        verifyAuctionInitial(auction, genesisHolder.address, 100*COIN, 10*COIN, 60, kton.address, 0, 0, 0);
+        verifyAuctionInitial(auction, genesisHolder.address, 100 * COIN, 10 * COIN, 60, kton.address, 0, 0, 0);
     })
 
-    it('[preparation for bid], create an auction which start time is in far future', async() => {
-        await genesisHolder.createAuction(genesisCommonLandTwo, 100*COIN, 10*COIN, 60, Date.now() / 1000 + 60, ring.address, {from: accounts[1]});
+    it('[preparation for bid], create an auction which start time is in far future', async () => {
+        await genesisHolder.createAuction(genesisCommonLandTwo, 100 * COIN, 10 * COIN, 60, Date.now() / 1000 + 60, ring.address, {from: accounts[1]});
         let auction = await clockAuction.getAuction(genesisCommonLandTwo);
-        verifyAuctionInitial(auction, genesisHolder.address, 100*COIN, 10*COIN, 60, ring.address, 0, 0, 0);
+        verifyAuctionInitial(auction, genesisHolder.address, 100 * COIN, 10 * COIN, 60, ring.address, 0, 0, 0);
     })
 
-    it('[bid-dsw-01], bid for an auction which is not started', async() => {
+    it('[bid-dsw-01], bid for an auction which is not started', async () => {
+        try {
+            // data : 0xffffffffffffffffffffffffffffff9b0000000000000000000000000000000200000000000000000000000002A98FDb710Ea5611423cC1a62c0d6ecF88A4E2E
+            let bidData = await generateBidData(genesisCommonLandTwo, accounts[2]);
+            await StandardERC223.at(ring.address).contract.transfer['address,uint256,bytes'](clockAuction.address, 100 * COIN, bidData, {
+                from: accounts[0],
+                gas: 3000000
+            });
+            assert(false, "did not throw.")
+        } catch (err) {
+            utils.ensureException(err);
+        }
+    })
 
-            // assert((await ring.balanceOf(accounts[0])).valueOf() > 0, 'accounts[0] has no rings');
-            // console.log("current price: ", (await clockAuction.getCurrentPriceInToken('0xffffffffffffffffffffffffffffff9b00000000000000000000000000000002')).valueOf());
-            // let bidData = await generateBidData(commonLand, accounts[2]);
-            // await StandardERC223.at(ring.address).contract.transfer['address,uint256,bytes'](clockAuction.address, 100 * COIN, '0xffffffffffffffffffffffffffffff9b0000000000000000000000000000000200000000000000000000000002A98FDb710Ea5611423cC1a62c0d6ecF88A4E2E');
-            // assert(false, "did not throw.")
-            //
-            // let tokenId = '0x' + (await atlantis.tokenOfOwnerByIndex(clockAuction.address, 0)).toString(16);
-            // console.log('tokenId in auction: ', tokenId);
-            // assert((await ring.balanceOf(accounts[0])).valueOf() > 100000 * COIN);
+    it('[bid-dsw-02], bid for an auction that does not exist', async () => {
+        try {
+            let bidData = await generateBidData(notExitLand, accounts[1]);
+            await StandardERC223.at(ring.address).contract.transfer['address,uint256,bytes'](clockAuction.address, 100 * COIN, bidData, {
+                from: accounts[0],
+                gas: 3000000
+            });
+            assert(false, "did not throw.")
+        } catch (err) {
+            utils.ensureException(err);
+        }
+    })
 
-            await StandardERC223.at(ring.address).contract.transfer['address,uint256,bytes'](clockAuction.address, 100 * COIN, '0xffffffffffffffffffffffffffffff9b0000000000000000000000000000000200000000000000000000000002A98FDb710Ea5611423cC1a62c0d6ecF88A4E2E', {from: accounts[0], gas:3000000});
-            console.log('balanceof clockauction: ', await ring.balanceOf(clockAuction.address));
-            let auction = await clockAuction.getAuction('0xffffffffffffffffffffffffffffff9b00000000000000000000000000000002');
-            firstBidRecord = auction[6];
-            console.log('firstBidRecord: ', firstBidRecord);
-           // verifyAuctionInBid(auction, accounts[0], 100000 * COIN, 50000 * COIN, 300, ring.address, accounts[0], accounts[1]);
-
+    it('[bid-dsw-03], bid for an auction with another token', async () => {
+        try {
+            let bidData = await generateBidData(notExitLand, accounts[1]);
+            await StandardERC223.at(kton.address).contract.transfer['address,uint256,bytes'](clockAuction.address, 110 * COIN, bidData, {
+                from: accounts[0],
+                gas: 3000000
+            });
+            assert(false, "did not throw.")
+        } catch (err) {
+            utils.ensureException(err);
+        }
 
     })
 
+    it('preparation for test [bid-dsw-04]', async () => {
+        firstBidLandInRing = await atlantis.encodeTokenId(-88, 4);
+        firstBidLandInETH = await atlantis.encodeTokenId(-89, 4);
+
+        await atlantis.assignNewLand(-88, 4, accounts[3]);
+        await atlantis.assignNewLand(-89, 4, accounts[3]);
+        let auctionData = await generateCreateData(100 * COIN, 10 * COIN, 60, accounts[3]);
+        await atlantis.approveAndCall(clockAuction.address, firstBidLandInRing, auctionData, {from: accounts[3]});
+        await atlantis.approveAndCall(clockAuction.address, firstBidLandInETH, auctionData, {from: accounts[3]});
+    })
+
+    it('[bid-dsw-04], verify first bid', async () => {
+        let bidDataRing = await generateBidData(firstBidLandInRing, accounts[5]);
+
+        // seller is accounts[3]
+        let ringBalance3Before = await ring.balanceOf(accounts[3]);
+        let ringBalance4Before = await ring.balanceOf(accounts[4]);
+        let auctionBalanceBefore = await ring.balanceOf(clockAuction.address);
+        let ringBalance5Before = await ring.balanceOf(accounts[5]);
+
+        await StandardERC223.at(ring.address).contract.transfer['address,uint256,bytes'](clockAuction.address, 100 * COIN, bidDataRing, {
+            from: accounts[4],
+            gas: 3000000
+        });
+
+        let ringBalance3After = await ring.balanceOf(accounts[3]);
+        let ringBalance4After = await ring.balanceOf(accounts[4]);
+        let auctionBalanceAfter = await ring.balanceOf(clockAuction.address);
+        let ringBalance5After = await ring.balanceOf(accounts[5]);
+
+        let ringIn = ringBalance4Before.valueOf() - ringBalance4After.valueOf();
+        let ringToSeller = ringBalance3After.valueOf() - ringBalance3Before.valueOf();
+        let ringToAuction = auctionBalanceAfter.valueOf() - auctionBalanceBefore.valueOf();
+        let ringToReferer = ringBalance5After.valueOf() - ringBalance5Before.valueOf();
+
+        console.log("seller ring before bid: ", ringBalance3Before.valueOf());
+        console.log("seller ring after bid: ", ringBalance3After.valueOf());
+        console.log("seller ring change: ", ringIn);
+
+        console.log("RING to seller: ", ringToSeller);
+        console.log("RING to official: ", ringToAuction);
+        console.log("RING to referer: ", ringToReferer);
+
+        assert.equal(ringIn == (ringToReferer + ringToSeller + ringToAuction), 'in does not equal to balance.')
+
+        // await clockAuction.bidWithETH(firstBidLandInETH, accounts[6], {value: 1 * COIN, from: accounts[4], gas: 3000000});
+    })
 
 
     // it('create an auction', async() => {
@@ -284,7 +354,6 @@ contract('ClockAuction deployment', async(accounts) => {
     //     assert.equal(owner, accounts[2]);
     //     console.log('owner: ', owner);
     // });
-
 
 
 })
