@@ -63,7 +63,7 @@ async function initClockAuction(accounts) {
     await registry.setAddressProperty(await auctionSettingsId.CONTRACT_AUCTION_CLAIM_BOUNTY.call(), claimBountyCalculator.address);
     await registry.setAddressProperty(await auctionSettingsId.CONTRACT_MYSTERIOUS_TREASURE.call(), mysteriousTreasure.address);
     await registry.setAddressProperty(await auctionSettingsId.CONTRACT_BANCOR_EXCHANGE.call(), bancorExchange.address);
-    await registry.setAddressProperty(await auctionSettingsId.CONTRACT_TOKEN_OWNERSHIP.call(), objectOwnership.address);
+    await registry.setAddressProperty(await auctionSettingsId.CONTRACT_OBJECT_OWNERSHIP.call(), objectOwnership.address);
     await registry.setAddressProperty(await auctionSettingsId.CONTRACT_LAND_BASE.call(), landBase.address);
     // register uint
     await registry.setUintProperty(await auctionSettingsId.UINT_AUCTION_CUT.call(), uint_auction_cut);

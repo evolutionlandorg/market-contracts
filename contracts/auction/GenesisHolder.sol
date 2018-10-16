@@ -41,16 +41,15 @@ contract GenesisHolder is Ownable, AuctionSettingIds {
 
         require(msg.sender == operator);
 
-        ILandBase landBase = ILandBase(registry.addressOf(SettingIds.CONTRACT_LAND_BASE));
         // reserved land do not allow ring for genesis auction
-        if (landBase.isReserved(_tokenId)) {
+        if (ILandBase(registry.addressOf(SettingIds.CONTRACT_LAND_BASE)).isReserved(_tokenId)) {
             require(_token != address(ring));
         }
 
         IClockAuction auction = IClockAuction(registry.addressOf(AuctionSettingIds.CONTRACT_CLOCK_AUCTION));
-        ERC721Basic tokenOwnership = ERC721Basic(registry.addressOf(SettingIds.CONTRACT_TOKEN_OWNERSHIP));
+
         // aprove land to auction contract
-        tokenOwnership.approve(address(auction), _tokenId);
+        ERC721Basic(registry.addressOf(SettingIds.CONTRACT_OBJECT_OWNERSHIP)).approve(address(auction), _tokenId);
         // create an auciton
         // have to set _seller to this
         auction.createAuction(_tokenId,_startingPriceInToken, _endingPriceInToken, _duration,_startAt, _token);

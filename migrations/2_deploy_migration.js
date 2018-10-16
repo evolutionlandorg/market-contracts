@@ -4,7 +4,7 @@ const AuctionSettingIds = artifacts.require('AuctionSettingIds');
 const MysteriousTreasure = artifacts.require('MysteriousTreasure');
 const GenesisHolder = artifacts.require('GenesisHolder')
 const LandBase = artifacts.require('LandBase');
-const TokenOwnership = artifacts.require('TokenOwnership');
+const ObjectOwnership = artifacts.require('ObjectOwnership');
 const ClockAuction = artifacts.require('ClockAuction')
 
 // bancor related
@@ -48,7 +48,7 @@ module.exports = function (deployer) {
 
         deployer.deploy(SettingsRegistry);
         deployer.deploy(AuctionSettingIds);
-        deployer.deploy(TokenOwnership);
+        deployer.deploy(ObjectOwnership);
         deployer.deploy(ClaimBountyCalculator);
         deployer.deploy(LandBase).then(async () => {
             let ring = await RING.at(BancorAddress.RING);
@@ -67,7 +67,7 @@ module.exports = function (deployer) {
             await registry.setAddressProperty(await auctionSettingsId.CONTRACT_AUCTION_CLAIM_BOUNTY.call(), ClaimBountyCalculator.address);
             await registry.setAddressProperty(await auctionSettingsId.CONTRACT_MYSTERIOUS_TREASURE.call(), MysteriousTreasure.address);
             await registry.setAddressProperty(await auctionSettingsId.CONTRACT_BANCOR_EXCHANGE.call(), BancorAddress.BancorExchange);
-            await registry.setAddressProperty(await auctionSettingsId.CONTRACT_TOKEN_OWNERSHIP.call(), TokenOwnership.address);
+            await registry.setAddressProperty(await auctionSettingsId.CONTRACT_OBJECT_OWNERSHIP.call(), ObjectOwnership.address);
             await registry.setAddressProperty(await auctionSettingsId.CONTRACT_LAND_BASE.call(), LandBase.address);
             // register uint
             await registry.setUintProperty(await auctionSettingsId.UINT_AUCTION_CUT.call(), AuctionConf.uint_auction_cut);

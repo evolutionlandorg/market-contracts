@@ -42,7 +42,7 @@ contract MysteriousTreasure is Ownable, AuctionSettingIds {
             return (0,0,0,0,0);
         }
 
-        uint[5] memory resourcesReward;
+        uint16[5] memory resourcesReward;
         (resourcesReward[0], resourcesReward[1],
         resourcesReward[2], resourcesReward[3], resourcesReward[4]) = _computeReward();
 
@@ -74,12 +74,12 @@ contract MysteriousTreasure is Ownable, AuctionSettingIds {
     // if early players get high resourceReward, then the later ones will get lower.
     // in other words, if early players get low resourceReward, the later ones get higher.
     // think about snatching wechat's virtual red envelopes in groups.
-    function _computeReward() internal returns(uint,uint,uint,uint,uint) {
+    function _computeReward() internal returns(uint16,uint16,uint16,uint16,uint16) {
         if ( totalBoxNotOpened == 0 ) {
             return (0,0,0,0,0);
         }
 
-        uint[5] memory resourceRewards;
+        uint16[5] memory resourceRewards;
 
         // from fomo3d
         // msg.sender is always address(auction),
@@ -94,22 +94,22 @@ contract MysteriousTreasure is Ownable, AuctionSettingIds {
             )));
 
 
-            for(uint i = 0; i < 5; i++) {
-                if (totalBoxNotOpened > 1) {
-                    // recources in resourcePool is set by owner
-                    // nad totalBoxNotOpened is set by rules
-                    // there is no need to consider overflow
-                    // goldReward, woodReward, waterReward, fireReward, soilReward
-                    resourceRewards[i] = seed % (2 * resourcePool[i] / totalBoxNotOpened);
-                    
-                    // update resourcePool
-                    _setResourcePool(i, resourcePool[i] - resourceRewards[i]);
-                }
+        for(uint i = 0; i < 5; i++) {
+            if (totalBoxNotOpened > 1) {
+                // recources in resourcePool is set by owner
+                // nad totalBoxNotOpened is set by rules
+                // there is no need to consider overflow
+                // goldReward, woodReward, waterReward, fireReward, soilReward
+                resourceRewards[i] = uint16(seed % (2 * resourcePool[i] / totalBoxNotOpened));
+                
+                // update resourcePool
+                _setResourcePool(i, resourcePool[i] - resourceRewards[i]);
+            }
 
-                if(totalBoxNotOpened == 1) {
-                    resourceRewards[i] = resourcePool[i];
-                    _setResourcePool(i, resourcePool[i] - resourceRewards[i]);
-                }
+            if(totalBoxNotOpened == 1) {
+                resourceRewards[i] = uint16(resourcePool[i]);
+                _setResourcePool(i, resourcePool[i] - resourceRewards[i]);
+            }
         }
 
         totalBoxNotOpened--;
