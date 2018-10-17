@@ -20,8 +20,9 @@ contract RevenuePool is Ownable, ERC223ReceivingContract, SettingIds {
     address public devPool;
 
     ISettingsRegistry public registry;
+
     bool private singletonLock = false;
-    address genesisHolder;
+
 
     // claimedToken event
     event ClaimedTokens(address indexed token, address indexed owner, uint amount);
@@ -42,19 +43,20 @@ contract RevenuePool is Ownable, ERC223ReceivingContract, SettingIds {
 
     function tokenFallback(address _from, uint256 _value, bytes _data) public {
 
-        if(msg.sender == genesisHolder) {
+        address ring = registry.addressOf(SettingIds.CONTRACT_RING_ERC20_TOKEN);
+
+        if(msg.sender == ring) {
             return;
         }
     }
 
-    function setPoolAddresses(address _tradingRewardPool, address _contributionIncentivePool, address _dividendsPool, address _devPool, address _genesisHolder)
+    function setPoolAddresses(address _tradingRewardPool, address _contributionIncentivePool, address _dividendsPool, address _devPool)
     public
     onlyOwner {
         tradingRewardPool = _tradingRewardPool;
         contributionIncentivePool = _contributionIncentivePool;
         dividendsPool = _dividendsPool;
         devPool = _devPool;
-        genesisHolder = _genesisHolder;
     }
 
     function batchTransfer(address _tokenAddress) public {
