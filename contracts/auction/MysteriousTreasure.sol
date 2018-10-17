@@ -94,7 +94,6 @@ contract MysteriousTreasure is Ownable, AuctionSettingIds {
                 (block.number)
             )));
 
-
             for(uint i = 0; i < 5; i++) {
                 if (totalBoxNotOpened > 1) {
                     // recources in resourcePool is set by owner

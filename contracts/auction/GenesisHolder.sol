@@ -8,6 +8,7 @@ import "@evolutionland/common/contracts/interfaces/IBurnableERC20.sol";
 import "@evolutionland/land/contracts/interfaces/ILandBase.sol";
 import "./interfaces/IClockAuction.sol";
 import "./AuctionSettingIds.sol";
+import "@evolutionland/common/contracts/interfaces/ERC223.sol";
 
 
 contract GenesisHolder is Ownable, AuctionSettingIds {
@@ -21,6 +22,8 @@ contract GenesisHolder is Ownable, AuctionSettingIds {
     // registered land-related token to this
     // do not register ring
     mapping (address => bool) registeredToken;
+
+    address public pool;
 
     // claimedToken event
     event ClaimedTokens(address indexed token, address indexed owner, uint amount);
@@ -41,16 +44,16 @@ contract GenesisHolder is Ownable, AuctionSettingIds {
 
         require(msg.sender == operator);
 
-        ILandBase landBase = ILandBase(registry.addressOf(SettingIds.CONTRACT_LAND_BASE));
         // reserved land do not allow ring for genesis auction
-        if (landBase.isReserved(_tokenId)) {
+        if (ILandBase(registry.addressOf(SettingIds.CONTRACT_LAND_BASE)).isReserved(_tokenId)) {
             require(_token != address(ring));
         }
 
         IClockAuction auction = IClockAuction(registry.addressOf(AuctionSettingIds.CONTRACT_CLOCK_AUCTION));
-        ERC721Basic objectOwnership = ERC721Basic(registry.addressOf(SettingIds.CONTRACT_OBJECT_OWNERSHIP));
+
+
         // aprove land to auction contract
-        objectOwnership.approve(address(auction), _tokenId);
+        ERC721Basic(registry.addressOf(SettingIds.CONTRACT_OBJECT_OWNERSHIP)).approve(address(auction), _tokenId);
         // create an auciton
         // have to set _seller to this
         auction.createAuction(_tokenId,_startingPriceInToken, _endingPriceInToken, _duration,_startAt, _token);
@@ -65,7 +68,7 @@ contract GenesisHolder is Ownable, AuctionSettingIds {
     function tokenFallback(address _from, uint _amount, bytes _data) public {
         // double check
         if (msg.sender == address(ring)) {
-            return;
+            ERC223(msg.sender).transfer(pool, _amount, _data);
         }
 
         if (registeredToken[msg.sender] == true) {
