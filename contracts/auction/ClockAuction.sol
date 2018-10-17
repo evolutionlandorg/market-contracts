@@ -5,6 +5,17 @@ import "./interfaces/IMysteriousTreasure.sol";
 
 contract ClockAuction is ClockAuctionBase {
 
+    bool private singletonLock = false;
+
+    /*
+    *  Modifiers
+    */
+    modifier singletonLockCall() {
+        require(!singletonLock, "Only can call once");
+        _;
+        singletonLock = true;
+    }
+
     modifier isHuman() {
         require(msg.sender == tx.origin, "robot is not permitted");
         _;
@@ -20,12 +31,17 @@ contract ClockAuction is ClockAuctionBase {
     /// @param _nftAddress - address of a deployed contract implementing
     ///  the Nonfungible Interface.
     ///  bidWaitingMinutes - biggest waiting time from a bid's starting to ending(in minutes)
-    constructor(
+    constructor() public {
+        // initializeContract
+    }
+
+    function initializeContract(
         address _nftAddress,
         address _pangu,
-        ISettingsRegistry _registry
-    )
-    public {
+        ISettingsRegistry _registry) public singletonLockCall {
+
+        owner = msg.sender;
+
         ERC721Basic candidateContract = ERC721Basic(_nftAddress);
         // InterfaceId_ERC721 = 0x80ac58cd;
         // require(candidateContract.supportsInterface(0x80ac58cd));
@@ -37,6 +53,7 @@ contract ClockAuction is ClockAuctionBase {
         // NOTE: to make auction work well
         // set address of bancorExchange in registry first
         _setPangu(_pangu);
+
     }
 
     ///////////////////////
