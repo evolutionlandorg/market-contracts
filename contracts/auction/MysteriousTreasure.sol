@@ -47,19 +47,19 @@ contract MysteriousTreasure is Ownable, AuctionSettingIds {
         resourcesReward[2], resourcesReward[3], resourcesReward[4]) = _computeReward();
 
         address resouceToken = registry.addressOf(SettingIds.CONTRACT_GOLD_ERC20_TOKEN);
-        landBase.modifyResourceRate(_tokenId, resouceToken, landBase.getResourceRate(_tokenId, resouceToken) + resourcesReward[0]);
+        landBase.setResourceRate(_tokenId, resouceToken, landBase.getResourceRate(_tokenId, resouceToken) + resourcesReward[0]);
 
         resouceToken = registry.addressOf(SettingIds.CONTRACT_WOOD_ERC20_TOKEN);
-        landBase.modifyResourceRate(_tokenId, resouceToken, landBase.getResourceRate(_tokenId, resouceToken) + resourcesReward[1]);
+        landBase.setResourceRate(_tokenId, resouceToken, landBase.getResourceRate(_tokenId, resouceToken) + resourcesReward[1]);
 
         resouceToken = registry.addressOf(SettingIds.CONTRACT_WATER_ERC20_TOKEN);
-        landBase.modifyResourceRate(_tokenId, resouceToken, landBase.getResourceRate(_tokenId, resouceToken) + resourcesReward[2]);
+        landBase.setResourceRate(_tokenId, resouceToken, landBase.getResourceRate(_tokenId, resouceToken) + resourcesReward[2]);
 
         resouceToken = registry.addressOf(SettingIds.CONTRACT_FIRE_ERC20_TOKEN);
-        landBase.modifyResourceRate(_tokenId, resouceToken, landBase.getResourceRate(_tokenId, resouceToken) + resourcesReward[3]);
+        landBase.setResourceRate(_tokenId, resouceToken, landBase.getResourceRate(_tokenId, resouceToken) + resourcesReward[3]);
 
         resouceToken = registry.addressOf(SettingIds.CONTRACT_SOIL_ERC20_TOKEN);
-        landBase.modifyResourceRate(_tokenId, resouceToken, landBase.getResourceRate(_tokenId, resouceToken) + resourcesReward[4]);
+        landBase.setResourceRate(_tokenId, resouceToken, landBase.getResourceRate(_tokenId, resouceToken) + resourcesReward[4]);
 
         // only record increment of resources
         emit Unbox(_tokenId, resourcesReward[0], resourcesReward[1], resourcesReward[2], resourcesReward[3], resourcesReward[4]);
