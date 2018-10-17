@@ -284,14 +284,14 @@ contract ClockAuction is ClockAuctionBase {
             //  value <= price, so this subtraction can't go negative.)
             // TODO: token to the seller
             // we dont touch claimBounty
-            uint256 ownerCut = computeCut(priceWithoutBounty, auctionCut);
+            uint256 ownerCutAmount = computeCut(priceWithoutBounty, auctionCut);
 
             // transfer to the seller
-            ERC20(_auction.token).transfer(_auction.seller, (priceWithoutBounty - ownerCut));
+            ERC20(_auction.token).transfer(_auction.seller, (priceWithoutBounty - ownerCutAmount));
 
             if (_referer != 0x0) {
                 // refererBounty = computeCut(ownerCut, refererCut);
-                ERC20(_auction.token).transfer(_referer, computeCut(ownerCut, refererCut));
+                ERC20(_auction.token).transfer(_referer, computeCut(ownerCutAmount, refererCut));
             }
 
 
@@ -316,7 +316,7 @@ contract ClockAuction is ClockAuctionBase {
             // here double check
             // 1.1*price + bounty - (price + bounty) = 0.1 * price
             // we dont touch claimBounty
-            uint extractFromGap = computeCut(_priceInToken.sub(uint256(_auction.lastRecord)), auctionCut);
+            uint extractFromGap = _priceInToken.sub(uint256(_auction.lastRecord) - computeCut(_priceInToken.sub(uint256(_auction.lastRecord)), auctionCut));
             uint realReturnForEach = extractFromGap / 2;
 
             ERC20(_auction.token).transfer(_auction.seller, realReturnForEach);

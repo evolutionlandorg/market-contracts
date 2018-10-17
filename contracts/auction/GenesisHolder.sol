@@ -48,9 +48,9 @@ contract GenesisHolder is Ownable, AuctionSettingIds {
         }
 
         IClockAuction auction = IClockAuction(registry.addressOf(AuctionSettingIds.CONTRACT_CLOCK_AUCTION));
-        ERC721Basic tokenOwnership = ERC721Basic(registry.addressOf(SettingIds.CONTRACT_TOKEN_OWNERSHIP));
+        ERC721Basic objectOwnership = ERC721Basic(registry.addressOf(SettingIds.CONTRACT_OBJECT_OWNERSHIP));
         // aprove land to auction contract
-        tokenOwnership.approve(address(auction), _tokenId);
+        objectOwnership.approve(address(auction), _tokenId);
         // create an auciton
         // have to set _seller to this
         auction.createAuction(_tokenId,_startingPriceInToken, _endingPriceInToken, _duration,_startAt, _token);
