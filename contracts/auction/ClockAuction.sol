@@ -26,15 +26,16 @@ contract ClockAuction is ClockAuctionBase {
     // Constructor
     ///////////////////////
 
+
+    constructor() public {
+        // initializeContract
+    }
+
     /// @dev Constructor creates a reference to the NFT ownership contract
     ///  and verifies the owner cut is in the valid range.
     /// @param _nftAddress - address of a deployed contract implementing
     ///  the Nonfungible Interface.
     ///  bidWaitingMinutes - biggest waiting time from a bid's starting to ending(in minutes)
-    constructor() public {
-        // initializeContract
-    }
-
     function initializeContract(
         address _nftAddress,
         address _pangu,
