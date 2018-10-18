@@ -14,6 +14,9 @@ import "@evolutionland/bancor/solidity/contracts/BancorNetwork.sol";
 import "@evolutionland/bancor/solidity/contracts/BancorExchange.sol";
 import "@evolutionland/bancor/solidity/contracts/ContractIds.sol";
 import "@evolutionland/bancor/solidity/contracts/FeatureIds.sol";
+import "@evolutionland/land/contracts/LandBaseAuthority.sol";
+import "@evolutionland/upgraeability-using-unstructured-storage/contracts/OwnedUpgradeabilityProxy.sol";
+import "@evolutionland/bancor/solidity/contracts/token/SmartTokenAuthority.sol";
 
 contract DeployAndTest {
 

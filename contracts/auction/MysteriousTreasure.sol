@@ -7,6 +7,8 @@ import "@evolutionland/land/contracts/interfaces/ILandBase.sol";
 import "./AuctionSettingIds.sol";
 
 contract MysteriousTreasure is Ownable, AuctionSettingIds {
+    bool private singletonLock = false;
+
     using SafeMath for *;
 
     ISettingsRegistry public registry;
@@ -21,8 +23,24 @@ contract MysteriousTreasure is Ownable, AuctionSettingIds {
     // event unbox
     event Unbox(uint indexed tokenId, uint goldRate, uint woodRate, uint waterRate, uint fireRate, uint soilRate);
 
+    /*
+  *  Modifiers
+  */
+    modifier singletonLockCall() {
+        require(!singletonLock, "Only can call once");
+        _;
+        singletonLock = true;
+    }
+
     // this need to be created in ClockAuction cotnract
-    constructor(ISettingsRegistry _registry, uint256[5] _resources) public {
+    constructor() public {
+
+      // initializeContract
+    }
+
+    function initializeContract(ISettingsRegistry _registry, uint256[5] _resources) public singletonLockCall {
+        owner = msg.sender;
+
         registry = _registry;
 
         totalBoxNotOpened = 176;
