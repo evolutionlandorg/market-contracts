@@ -4,12 +4,14 @@ import "@evolutionland/common/contracts/interfaces/ISettingsRegistry.sol";
 import "@evolutionland/common/contracts/interfaces/ERC223ReceivingContract.sol";
 import "@evolutionland/common/contracts/SettingIds.sol";
 import "@evolutionland/common/contracts/interfaces/ERC223.sol";
-import "@evolutionland/common/contracts/RBACWithAuth.sol";
+import "@evolutionland/common/contracts/DSAuth.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
+import "./interfaces/ITradingRewardPool.sol";
 
 // Use proxy mode
-// recommond to use RBACWithAuth and add functions to modify tickets
-contract RevenuePool is RBACWithAuth, ERC223ReceivingContract, SettingIds {
+contract RevenuePool is DSAuth, ERC223ReceivingContract, SettingIds {
+
+    bool private singletonLock = false;
 
     // 10%
     address public tradingRewardPool;
@@ -21,12 +23,6 @@ contract RevenuePool is RBACWithAuth, ERC223ReceivingContract, SettingIds {
     address public devPool;
 
     ISettingsRegistry public registry;
-
-    bool private singletonLock = false;
-
-    // tickets
-    mapping (address => uint256) tickets;
-
 
     // claimedToken event
     event ClaimedTokens(address indexed token, address indexed owner, uint amount);
@@ -41,8 +37,8 @@ contract RevenuePool is RBACWithAuth, ERC223ReceivingContract, SettingIds {
     }
 
     function initializeContract(address _registry) public singletonLockCall {
-        addRole(msg.sender, ROLE_ADMIN);
-        addRole(msg.sender, ROLE_AUTH_CONTROLLER);
+        owner = msg.sender;
+        emit LogSetOwner(msg.sender);
 
         registry = ISettingsRegistry(_registry);
     }
@@ -53,25 +49,22 @@ contract RevenuePool is RBACWithAuth, ERC223ReceivingContract, SettingIds {
 
         if(msg.sender == ring) {
             address buyer = bytesToAddress(_data);
-            tickets[buyer] += _value;
+            // should same with trading reward percentage in settleToken;
+
+            ITradingRewardPool(tradingRewardPool).addTickets(buyer, _value / 10);
         }
     }
 
     function setPoolAddresses(address _tradingRewardPool, address _contributionIncentivePool, address _dividendsPool, address _devPool)
     public
-    isAuth {
+    auth {
         tradingRewardPool = _tradingRewardPool;
         contributionIncentivePool = _contributionIncentivePool;
         dividendsPool = _dividendsPool;
         devPool = _devPool;
     }
 
-    function updateTickets(address _user, uint _newTicket) public isAuth {
-        tickets[_user] = _newTicket;
-    }
-
-
-    function batchTransfer(address _tokenAddress) public {
+    function settleToken(address _tokenAddress) public {
         require(tradingRewardPool != 0x0 && contributionIncentivePool != 0x0 && dividendsPool != 0x0 && devPool != 0x0);
 
         uint balance = ERC20(_tokenAddress).balanceOf(address(this));
@@ -82,19 +75,18 @@ contract RevenuePool is RBACWithAuth, ERC223ReceivingContract, SettingIds {
         require(ERC223(_tokenAddress).transfer(devPool, balance * 3 / 10, "0x0"));
     }
 
-
     /// @notice This method can be used by the owner to extract mistakenly
     ///  sent tokens to this contract.
     /// @param _token The address of the token contract that you want to recover
     ///  set to 0 in case you want to extract ether.
-    function claimTokens(address _token) public onlyAdmin {
+    function claimTokens(address _token) public auth {
         if (_token == 0x0) {
-            msg.sender.transfer(address(this).balance);
+            owner.transfer(address(this).balance);
             return;
         }
         ERC20 token = ERC20(_token);
         uint balance = token.balanceOf(address(this));
-        token.transfer(msg.sender, balance);
+        token.transfer(owner, balance);
 
         emit ClaimedTokens(_token, msg.sender, balance);
     }
@@ -107,12 +99,5 @@ contract RevenuePool is RBACWithAuth, ERC223ReceivingContract, SettingIds {
         }
         return address(out);
     }
-
-
-
-
-
-
-
 
 }
