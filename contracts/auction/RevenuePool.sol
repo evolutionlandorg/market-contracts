@@ -11,6 +11,8 @@ import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 // recommond to use RBACWithAuth and add functions to modify tickets
 contract RevenuePool is Ownable, ERC223ReceivingContract, SettingIds {
 
+    bool private singletonLock = false;
+
     // 10%
     address public tradingRewardPool;
     // 30%
@@ -22,11 +24,8 @@ contract RevenuePool is Ownable, ERC223ReceivingContract, SettingIds {
 
     ISettingsRegistry public registry;
 
-    bool private singletonLock = false;
-
     // tickets
-    mapping (address => uint256) tickets;
-
+    mapping (address => uint256) public tickets;
 
     // claimedToken event
     event ClaimedTokens(address indexed token, address indexed owner, uint amount);
