@@ -1,6 +1,6 @@
 pragma solidity ^0.4.24;
 
-import "@evolutionland/common/contracts/RBACWithAuth.sol";
+import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "@evolutionland/common/contracts/interfaces/ISettingsRegistry.sol";
 import "@evolutionland/common/contracts/SettingIds.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
@@ -9,8 +9,11 @@ import "./interfaces/ITradingRewardPool.sol";
 import "./RevenuePool.sol";
 import "./AuctionSettingIds.sol";
 
-contract TradingRewardPool is RBACWithAuth, ITradingRewardPool, AuctionSettingIds {
+contract TradingRewardPool is Ownable, ITradingRewardPool, AuctionSettingIds {
     using SafeMath for *;
+
+    // claimedToken event
+    event ClaimedTokens(address indexed token, address indexed owner, uint amount);
 
     ISettingsRegistry public registry;
 
@@ -57,5 +60,21 @@ contract TradingRewardPool is RBACWithAuth, ITradingRewardPool, AuctionSettingId
         ERC20(registry.addressOf(SettingIds.CONTRACT_RING_ERC20_TOKEN)).transfer(msg.sender, rewardAmount);
 
         emit RewardClaimedWithTicket(msg.sender, ticketAmount, rewardAmount);
+    }
+
+    /// @notice This method can be used by the owner to extract mistakenly
+    ///  sent tokens to this contract.
+    /// @param _token The address of the token contract that you want to recover
+    ///  set to 0 in case you want to extract ether.
+    function claimTokens(address _token) public onlyOwner {
+        if (_token == 0x0) {
+            owner.transfer(address(this).balance);
+            return;
+        }
+        ERC20 token = ERC20(_token);
+        uint balance = token.balanceOf(address(this));
+        token.transfer(owner, balance);
+
+        emit ClaimedTokens(_token, owner, balance);
     }
 }
