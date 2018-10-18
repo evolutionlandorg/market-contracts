@@ -52,7 +52,8 @@ contract RevenuePool is RBACWithAuth, ERC223ReceivingContract, SettingIds {
 
         if(msg.sender == ring) {
             address buyer = bytesToAddress(_data);
-            tickets[buyer] += _value;
+            // should same with trading reward percentage in settleToken;
+            tickets[buyer] += _value / 10;
         }
     }
 
@@ -69,7 +70,6 @@ contract RevenuePool is RBACWithAuth, ERC223ReceivingContract, SettingIds {
         tickets[_user] = _newTicket;
     }
 
-
     function settleToken(address _tokenAddress) public {
         require(tradingRewardPool != 0x0 && contributionIncentivePool != 0x0 && dividendsPool != 0x0 && devPool != 0x0);
 
@@ -80,7 +80,6 @@ contract RevenuePool is RBACWithAuth, ERC223ReceivingContract, SettingIds {
         require(ERC223(_tokenAddress).transfer(dividendsPool, balance * 3 / 10, "0x0"));
         require(ERC223(_tokenAddress).transfer(devPool, balance * 3 / 10, "0x0"));
     }
-
 
     /// @notice This method can be used by the owner to extract mistakenly
     ///  sent tokens to this contract.
@@ -106,12 +105,5 @@ contract RevenuePool is RBACWithAuth, ERC223ReceivingContract, SettingIds {
         }
         return address(out);
     }
-
-
-
-
-
-
-
 
 }
