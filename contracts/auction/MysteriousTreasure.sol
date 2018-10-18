@@ -42,6 +42,10 @@ contract MysteriousTreasure is Ownable, AuctionSettingIds {
             return (0,0,0,0,0);
         }
 
+        // after unboxing, set hasBox(tokenId) to false to restrict unboxing
+        // set hasBox to false before unboxing operations for safety reason
+        landBase.setHasBox(_tokenId, false);
+
         uint16[5] memory resourcesReward;
         (resourcesReward[0], resourcesReward[1],
         resourcesReward[2], resourcesReward[3], resourcesReward[4]) = _computeReward();
@@ -63,9 +67,6 @@ contract MysteriousTreasure is Ownable, AuctionSettingIds {
 
         // only record increment of resources
         emit Unbox(_tokenId, resourcesReward[0], resourcesReward[1], resourcesReward[2], resourcesReward[3], resourcesReward[4]);
-
-        // after unboxing, set hasBox(tokenId) to false to restrict unboxing
-        landBase.setHasBox(_tokenId, false);
 
         return (resourcesReward[0], resourcesReward[1], resourcesReward[2], resourcesReward[3], resourcesReward[4]);
     }
@@ -93,23 +94,26 @@ contract MysteriousTreasure is Ownable, AuctionSettingIds {
                 (block.number)
             )));
 
+            for(uint i = 0; i < 5; i++) {
+                if (totalBoxNotOpened > 1) {
+                    // recources in resourcePool is set by owner
+                    // nad totalBoxNotOpened is set by rules
+                    // there is no need to consider overflow
+                    // goldReward, woodReward, waterReward, fireReward, soilReward
+                    // 2 ** 16 - 1
+                    uint doubleAverage = (2 * resourcePool[i] / totalBoxNotOpened) % 65535;
+                    uint resourceReward = seed % doubleAverage;
 
-        for(uint i = 0; i < 5; i++) {
-            if (totalBoxNotOpened > 1) {
-                // recources in resourcePool is set by owner
-                // nad totalBoxNotOpened is set by rules
-                // there is no need to consider overflow
-                // goldReward, woodReward, waterReward, fireReward, soilReward
-                resourceRewards[i] = uint16(seed % (2 * resourcePool[i] / totalBoxNotOpened));
-                
-                // update resourcePool
-                _setResourcePool(i, resourcePool[i] - resourceRewards[i]);
-            }
+                    resourceRewards[i] = uint16(resourceReward);
+                    
+                    // update resourcePool
+                    _setResourcePool(i, resourcePool[i] - resourceRewards[i]);
+                }
 
-            if(totalBoxNotOpened == 1) {
-                resourceRewards[i] = uint16(resourcePool[i]);
-                _setResourcePool(i, resourcePool[i] - resourceRewards[i]);
-            }
+                if(totalBoxNotOpened == 1) {
+                    resourceRewards[i] = uint16(resourcePool[i]);
+                    _setResourcePool(i, resourcePool[i] - uint256(resourceRewards[i]));
+                }
         }
 
         totalBoxNotOpened--;

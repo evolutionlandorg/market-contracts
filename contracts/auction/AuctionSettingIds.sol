@@ -37,4 +37,9 @@ contract AuctionSettingIds is SettingIds {
     // refererCut = 400;
     bytes32 public constant UINT_REFERER_CUT = "UINT_REFERER_CUT";
 
+    bytes32 public constant CONTRACT_REVENUE_POOL = "CONTRACT_REVENUE_POOL";
+
+    // value belongs to [0, 10000000]
+    bytes32 public constant UINT_EXCHANGE_ERROR_SPACE= "UINT_EXCHANGE_ERROR_SPACE";
+
 }

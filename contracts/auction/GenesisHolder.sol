@@ -8,9 +8,13 @@ import "@evolutionland/common/contracts/interfaces/IBurnableERC20.sol";
 import "@evolutionland/land/contracts/interfaces/ILandBase.sol";
 import "./interfaces/IClockAuction.sol";
 import "./AuctionSettingIds.sol";
+import "@evolutionland/common/contracts/interfaces/ERC223.sol";
 
 
 contract GenesisHolder is Ownable, AuctionSettingIds {
+
+    bool private singletonLock = false;
+
     ISettingsRegistry public registry;
 
     // the account who creates auctions
@@ -25,9 +29,26 @@ contract GenesisHolder is Ownable, AuctionSettingIds {
     // claimedToken event
     event ClaimedTokens(address indexed token, address indexed owner, uint amount);
 
-    constructor(ISettingsRegistry _registry, address _ring) public {
+    /*
+   *  Modifiers
+   */
+    modifier singletonLockCall() {
+        require(!singletonLock, "Only can call once");
+        _;
+        singletonLock = true;
+    }
+
+
+    constructor() public {
+        // initializeContract
+    }
+
+    function initializeContract(ISettingsRegistry _registry, address _ring) public singletonLockCall {
+        owner = msg.sender;
+
         registry = _registry;
         _setRing(_ring);
+
     }
 
     function createAuction(
@@ -48,6 +69,7 @@ contract GenesisHolder is Ownable, AuctionSettingIds {
 
         IClockAuction auction = IClockAuction(registry.addressOf(AuctionSettingIds.CONTRACT_CLOCK_AUCTION));
 
+
         // aprove land to auction contract
         ERC721Basic(registry.addressOf(SettingIds.CONTRACT_OBJECT_OWNERSHIP)).approve(address(auction), _tokenId);
         // create an auciton
@@ -64,7 +86,8 @@ contract GenesisHolder is Ownable, AuctionSettingIds {
     function tokenFallback(address _from, uint _amount, bytes _data) public {
         // double check
         if (msg.sender == address(ring)) {
-            return;
+            address pool = registry.addressOf(AuctionSettingIds.CONTRACT_REVENUE_POOL);
+            ERC223(msg.sender).transfer(pool, _amount, _data);
         }
 
         if (registeredToken[msg.sender] == true) {

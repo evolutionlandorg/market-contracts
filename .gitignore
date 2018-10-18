@@ -6,3 +6,5 @@ contracts-flattener
 package-lock.json
 truffle.js
 truffle-config.js
+scTopics
+coverageEnv

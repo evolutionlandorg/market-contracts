@@ -267,4 +267,9 @@ contract ClockAuctionBase is Pausable, AuctionSettingIds {
     }
 
 
+    function toBytes(address x) public pure returns (bytes b) {
+        b = new bytes(32);
+        assembly { mstore(add(b, 32), x) }
+    }
+
 }
