@@ -265,9 +265,7 @@ contract ClockAuction is ClockAuctionBase {
         ERC20 token = ERC20(auction.token);
         address lastBidder = auction.lastBidder;
         uint lastRecord = auction.lastRecord;
-        address lastReferer = auction.lastReferer;
 
-        uint auctionCut = registry.uintOf(AuctionSettingIds.UINT_AUCTION_CUT);
         IClaimBountyCalculator claimBountyCalculator = IClaimBountyCalculator(registry.addressOf(AuctionSettingIds.CONTRACT_AUCTION_CLAIM_BOUNTY));
 
         uint claimBounty = claimBountyCalculator.tokenAmountForBounty(auction.token);

@@ -1,6 +1,6 @@
 pragma solidity ^0.4.24;
 
-import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
+import "@evolutionland/common/contracts/DSAuth.sol";
 import "@evolutionland/common/contracts/interfaces/ISettingsRegistry.sol";
 import "@evolutionland/common/contracts/SettingIds.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
@@ -9,15 +9,34 @@ import "./interfaces/ITradingRewardPool.sol";
 import "./RevenuePool.sol";
 import "./AuctionSettingIds.sol";
 
-contract TradingRewardPool is Ownable, ITradingRewardPool, AuctionSettingIds {
+contract TradingRewardPool is DSAuth, ITradingRewardPool, AuctionSettingIds {
     using SafeMath for *;
 
     // claimedToken event
     event ClaimedTokens(address indexed token, address indexed owner, uint amount);
 
+    bool private singletonLock = false;
+
     ISettingsRegistry public registry;
 
-    constructor(address _registry) public {
+    // tickets
+    mapping (address => uint256) public tickets;
+
+    uint256 public totalTicketAmount;
+
+    /*
+     *  Modifiers
+     */
+    modifier singletonLockCall() {
+        require(!singletonLock, "Only can call once");
+        _;
+        singletonLock = true;
+    }
+
+    function initializeContract(address _registry) public singletonLockCall {
+        owner = msg.sender;
+        emit LogSetOwner(msg.sender);
+
         registry = ISettingsRegistry(_registry);
     }
 
@@ -29,7 +48,7 @@ contract TradingRewardPool is Ownable, ITradingRewardPool, AuctionSettingIds {
         RevenuePool(revenuePool)
             .settleToken(registry.addressOf(SettingIds.CONTRACT_RING_ERC20_TOKEN));
 
-        uint256 ticketAmount = RevenuePool(revenuePool).tickets(msg.sender);
+        uint256 ticketAmount = tickets[msg.sender];
 
         if (ticketAmount == 0) {
             return;
@@ -54,10 +73,18 @@ contract TradingRewardPool is Ownable, ITradingRewardPool, AuctionSettingIds {
             rewardAmount = 0;
         }
 
-        // clear ticket.
-        RevenuePool(revenuePool).updateTickets(msg.sender, 0);
+        address ring = registry.addressOf(SettingIds.CONTRACT_RING_ERC20_TOKEN);
 
-        ERC20(registry.addressOf(SettingIds.CONTRACT_RING_ERC20_TOKEN)).transfer(msg.sender, rewardAmount);
+        if (rewardAmount > totalTicketAmount) {
+            rewardAmount = totalTicketAmount;
+        }
+
+        rewardAmount = rewardAmount * ERC20(ring).balanceOf(msg.sender) / totalTicketAmount;
+
+        // clear ticket.
+        clearTicket(msg.sender);
+
+        ERC20(ring).transfer(msg.sender, rewardAmount);
 
         emit RewardClaimedWithTicket(msg.sender, ticketAmount, rewardAmount);
     }
@@ -66,7 +93,7 @@ contract TradingRewardPool is Ownable, ITradingRewardPool, AuctionSettingIds {
     ///  sent tokens to this contract.
     /// @param _token The address of the token contract that you want to recover
     ///  set to 0 in case you want to extract ether.
-    function claimTokens(address _token) public onlyOwner {
+    function claimTokens(address _token) public auth {
         if (_token == 0x0) {
             owner.transfer(address(this).balance);
             return;
@@ -77,4 +104,18 @@ contract TradingRewardPool is Ownable, ITradingRewardPool, AuctionSettingIds {
 
         emit ClaimedTokens(_token, owner, balance);
     }
+
+    function addTickets(address _user, uint256 _addTicketAmount) public auth {
+        tickets[_user] += _addTicketAmount;
+        totalTicketAmount += _addTicketAmount;
+
+        emit UpdatedTicketAmount(_user, tickets[_user]);
+    }
+
+    function clearTicket(address _user) public auth {
+        totalTicketAmount = totalTicketAmount.sub(tickets[_user]);
+        tickets[_user] = 0;
+        emit UpdatedTicketAmount(_user, 0);
+    }
+
 }
