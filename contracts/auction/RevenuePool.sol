@@ -1,15 +1,15 @@
 pragma solidity ^0.4.24;
 
-import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "@evolutionland/common/contracts/interfaces/ISettingsRegistry.sol";
 import "@evolutionland/common/contracts/interfaces/ERC223ReceivingContract.sol";
 import "@evolutionland/common/contracts/SettingIds.sol";
 import "@evolutionland/common/contracts/interfaces/ERC223.sol";
+import "@evolutionland/common/contracts/RBACWithAuth.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 
 // Use proxy mode
 // recommond to use RBACWithAuth and add functions to modify tickets
-contract RevenuePool is Ownable, ERC223ReceivingContract, SettingIds {
+contract RevenuePool is RBACWithAuth, ERC223ReceivingContract, SettingIds {
 
     bool private singletonLock = false;
 
@@ -40,7 +40,9 @@ contract RevenuePool is Ownable, ERC223ReceivingContract, SettingIds {
     }
 
     function initializeContract(address _registry) public singletonLockCall {
-        owner = msg.sender;
+        addRole(msg.sender, ROLE_ADMIN);
+        addRole(msg.sender, ROLE_AUTH_CONTROLLER);
+
         registry = ISettingsRegistry(_registry);
     }
 
@@ -56,12 +58,17 @@ contract RevenuePool is Ownable, ERC223ReceivingContract, SettingIds {
 
     function setPoolAddresses(address _tradingRewardPool, address _contributionIncentivePool, address _dividendsPool, address _devPool)
     public
-    onlyOwner {
+    isAuth {
         tradingRewardPool = _tradingRewardPool;
         contributionIncentivePool = _contributionIncentivePool;
         dividendsPool = _dividendsPool;
         devPool = _devPool;
     }
+
+    function updateTickets(address _user, uint _newTicket) public isAuth {
+        tickets[_user] = _newTicket;
+    }
+
 
     function batchTransfer(address _tokenAddress) public {
         require(tradingRewardPool != 0x0 && contributionIncentivePool != 0x0 && dividendsPool != 0x0 && devPool != 0x0);
@@ -74,20 +81,21 @@ contract RevenuePool is Ownable, ERC223ReceivingContract, SettingIds {
         require(ERC223(_tokenAddress).transfer(devPool, balance * 3 / 10, "0x0"));
     }
 
+
     /// @notice This method can be used by the owner to extract mistakenly
     ///  sent tokens to this contract.
     /// @param _token The address of the token contract that you want to recover
     ///  set to 0 in case you want to extract ether.
-    function claimTokens(address _token) public onlyOwner {
+    function claimTokens(address _token) public onlyAdmin {
         if (_token == 0x0) {
-            owner.transfer(address(this).balance);
+            msg.sender.transfer(address(this).balance);
             return;
         }
         ERC20 token = ERC20(_token);
         uint balance = token.balanceOf(address(this));
-        token.transfer(owner, balance);
+        token.transfer(msg.sender, balance);
 
-        emit ClaimedTokens(_token, owner, balance);
+        emit ClaimedTokens(_token, msg.sender, balance);
     }
 
     function bytesToAddress(bytes b) public pure returns (address) {
