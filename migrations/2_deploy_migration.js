@@ -10,6 +10,8 @@ const Proxy = artifacts.require('OwnedUpgradeabilityProxy');
 const LandBaseAuthority = artifacts.require('LandBaseAuthority');
 const RevenuePool = artifacts.require('RevenuePool');
 const SmartTokenAuthority = artifacts.require('SmartTokenAuthority');
+const TradingRewardPoolAuthority = artifacts.require('TradingRewardPoolAuthority');
+const TradingRewardPool = artifacts.require('TradingRewardPool');
 
 // bancor related
 const StandardERC223 = artifacts.require('StandardERC223');
@@ -52,11 +54,13 @@ let clockAuctionProxy_address;
 let mysteriousTreasureProxy_address;
 let genesisHolderProxy_address;
 let revenuePoolProxy_address;
+let tradingRewardPoolProxy_address;
 
 
 module.exports = function (deployer, network) {
     if (network == 'kovan') {
 
+        deployer.deploy(TradingRewardPoolAuthority);
         deployer.deploy(SmartTokenAuthority);
         deployer.deploy(AuctionSettingIds);
         deployer.deploy(LandBaseAuthority);
@@ -85,14 +89,22 @@ module.exports = function (deployer, network) {
             revenuePoolProxy_address = revenuePoolProxy.address;
             console.log("revenuePoolProxy_address: ", revenuePoolProxy_address);
             await deployer.deploy(RevenuePool);
+            return deployer.deploy(Proxy)
+        }).then(async() => {
+            let tradingRewardPoolProxy = await Proxy.deployed();
+            tradingRewardPoolProxy_address = tradingRewardPoolProxy.address;
+            console.log("tradingRewardPoolProxy_address: ", tradingRewardPoolProxy_address);
+            await deployer.deploy(TradingRewardPool);
         }).then(async () => {
+
             // let ring = await RING.at(conf.ring_address);
             let registry = await SettingsRegistry.at(conf.registry_address);
             let settingIds = await AuctionSettingIds.deployed();
-            // let objectOwnershipId = await settingIds.CONTRACT_OBJECT_OWNERSHIP.call();
-            // let nftAddress = await registry.addressOf(objectOwnershipId);
 
             //register to registry
+            let tradingRewardPoolId = await settingIds.CONTRACT_TRADING_REWARD_POOL.call();
+            await registry.setAddressProperty(tradingRewardPoolId,tradingRewardPoolProxy_address);
+
             let ringId = await settingIds.CONTRACT_RING_ERC20_TOKEN.call();
             await registry.setAddressProperty(ringId, conf.ring_address);
 
@@ -126,12 +138,12 @@ module.exports = function (deployer, network) {
 
             console.log("REGISTRATION DONE! ");
 
-
             // upgrade
             await Proxy.at(clockAuctionProxy_address).upgradeTo(ClockAuction.address);
             await Proxy.at(mysteriousTreasureProxy_address).upgradeTo(MysteriousTreasure.address);
             await Proxy.at(genesisHolderProxy_address).upgradeTo(GenesisHolder.address);
             await Proxy.at(revenuePoolProxy_address).upgradeTo(RevenuePool.address);
+            await Proxy.at(tradingRewardPoolProxy_address).upgradeTo(TradingRewardPool.address);
             console.log("UPGRADE DONE! ");
 
             // initialize
@@ -146,12 +158,20 @@ module.exports = function (deployer, network) {
 
             let revenuePoolProxy = await RevenuePool.at(revenuePoolProxy_address);
             await revenuePoolProxy.initializeContract(conf.registry_address);
+
+            let tradingRewardPoolProxy = await TradingRewardPool.at(tradingRewardPoolProxy_address);
+            await tradingRewardPoolProxy.initializeContract(conf.registry_address);
             console.log("INITIALIZATION DONE! ");
 
             // allow treasure to modify data in landbase
             let landBaseAuthority = await LandBaseAuthority.deployed();
             await landBaseAuthority.setWhitelist(mysteriousTreasureProxy_address, true);
             await LandBase.at(conf.landBaseProxy_address).setAuthority(landBaseAuthority.address);
+
+            // allow revenuePool to modify data in tradingRewardPool
+            let tradingRewardPoolAuthority = await TradingRewardPoolAuthority.deployed();
+            await tradingRewardPoolAuthority.setWhitelist(revenuePoolProxy.address, true);
+            await tradingRewardPoolProxy.setAuthority(tradingRewardPoolAuthority.address);
 
             // transfer treasure's owner to clockAuction
             await mysteriousTreasureProxy.transferOwnership(clockAuctionProxy_address);
