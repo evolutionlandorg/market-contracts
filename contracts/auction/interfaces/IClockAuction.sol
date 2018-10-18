@@ -1,4 +1,4 @@
-pragma solidity ^0.4.23;
+pragma solidity ^0.4.24;
 
 contract IClockAuction {
     function createAuction(
@@ -7,9 +7,7 @@ contract IClockAuction {
         uint256 _endingPriceInToken,
         uint256 _duration,
         uint256 _startAt,
-        address _token)
-    public;
+        address _token)public;
 
-    function cancelAuction(uint256 _tokenId)
-    public;
+    function cancelAuction(uint256 _tokenId) public;
 }

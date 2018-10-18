@@ -20,7 +20,7 @@
   },
   "homepage": "https://github.com/evolutionlandorg/market-contracts#readme",
   "dependencies": {
-    "@evolutionland/bancor": "^0.1.4",
+    "@evolutionland/bancor": "^0.1.5",
     "@evolutionland/common": "^1.2.1",
     "@evolutionland/land": "^1.1.1",
     "openzeppelin-solidity": "^1.12.0",

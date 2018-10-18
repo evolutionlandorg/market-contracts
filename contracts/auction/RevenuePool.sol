@@ -70,7 +70,7 @@ contract RevenuePool is RBACWithAuth, ERC223ReceivingContract, SettingIds {
     }
 
 
-    function batchTransfer(address _tokenAddress) public {
+    function settleToken(address _tokenAddress) public {
         require(tradingRewardPool != 0x0 && contributionIncentivePool != 0x0 && dividendsPool != 0x0 && devPool != 0x0);
 
         uint balance = ERC20(_tokenAddress).balanceOf(address(this));
