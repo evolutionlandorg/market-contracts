@@ -21,7 +21,6 @@ const BancorFormula = artifacts.require('BancorFormula');
 const BancorGasPriceLimit = artifacts.require('BancorGasPriceLimit');
 const EtherToken = artifacts.require('EtherToken');
 const ContractFeatures = artifacts.require('ContractFeatures');
-const ContractRegistry = artifacts.require('ContractRegistry');
 const WhiteList = artifacts.require('Whitelist');
 const BancorNetwork = artifacts.require('BancorNetwork');
 const BancorExchange = artifacts.require('BancorExchange');
