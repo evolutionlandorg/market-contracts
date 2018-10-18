@@ -2,6 +2,7 @@ pragma solidity ^0.4.23;
 
 import "./ClockAuctionBase.sol";
 import "./interfaces/IMysteriousTreasure.sol";
+import "@evolutionland/common/contracts/interfaces/ERC223.sol";
 
 contract ClockAuction is ClockAuctionBase {
 
@@ -125,7 +126,7 @@ contract ClockAuction is ClockAuctionBase {
             require(startingPriceInRING <= 1000000000 * COIN && endingPriceInRING <= 1000000000 * COIN);
             require(duration <= 1000 days);
             uint startAt = now;
-            //TODO: add parameter _token
+            // TODO: add parameter _token
             _createAuction(_from, _tokenId, startingPriceInRING, endingPriceInRING, duration, startAt, seller, address(RING));
         }
 
@@ -168,7 +169,9 @@ contract ClockAuction is ClockAuctionBase {
         // it will be reverted in bancorprotocol
         // so dont worry
         IBancorExchange bancorExchange = IBancorExchange(registry.addressOf(AuctionSettingIds.CONTRACT_BANCOR_EXCHANGE));
-        uint256 ringFromETH = bancorExchange.buyRING.value(msg.value)(priceInRING);
+        uint errorSpace = registry.uintOf(AuctionSettingIds.UINT_EXCHANGE_ERROR_SPACE);
+        uint256 ringFromETH;
+        (ringFromETH, ) = bancorExchange.buyRINGInMinRequiedETH.value(msg.value)(priceInRING, msg.sender, errorSpace);
 
         // double check
         uint refund = ringFromETH.sub(priceInRING);
@@ -282,76 +285,94 @@ contract ClockAuction is ClockAuctionBase {
         emit AuctionSuccessful(_tokenId, lastRecord, lastBidder);
     }
 
+    function firstPartBid(uint _auctionCut, uint _refererCut, address _pool, address _buyer, Auction storage _auction, uint _priceInToken, address _referer, uint _claimBounty) internal returns (uint, uint){
+        require(now >= uint256(_auction.startedAt));
+        //  Calculate the auctioneer's cut.
+        // (NOTE: computeCut() is guaranteed to return a
+        //  value <= price, so this subtraction can't go negative.)
+        // TODO: token to the seller
+        // we dont touch claimBounty
+        uint priceWithoutBounty = _priceInToken.sub(_claimBounty);
+        uint256 ownerCutAmount = computeCut(priceWithoutBounty, _auctionCut);
+
+        // transfer to the seller
+        ERC223(_auction.token).transfer(_auction.seller, (priceWithoutBounty - ownerCutAmount), toBytes(_buyer));
+
+        if (_referer != 0x0) {
+            uint refererBounty = computeCut(ownerCutAmount, _refererCut);
+            ERC20(_auction.token).transfer(_referer, refererBounty);
+            ERC223(_auction.token).transfer(_pool, (ownerCutAmount - refererBounty), toBytes(_buyer));
+        } else {
+            ERC223(_auction.token).transfer(_pool, ownerCutAmount, toBytes(_buyer));
+        }
+
+        // modify bid-related member variables
+        _auction.lastBidder = _buyer;
+        _auction.lastRecord = uint128(_priceInToken);
+        _auction.lastBidStartAt = now;
+        _auction.lastReferer = _referer;
+
+        return (_auction.lastBidStartAt, 0);
+    }
+
+
+    function secondPartBid(uint _auctionCut, uint _refererCut, address _pool, address _buyer, Auction storage _auction, uint _priceInToken, address _referer) internal returns (uint, uint){
+        // TODO: repair bug of first bid's time limitation
+        // if this the first bid, there is no time limitation
+        require(now <= _auction.lastBidStartAt + registry.uintOf(AuctionSettingIds.UINT_AUCTION_BID_WAITING_TIME), "It's too late.");
+
+        // _priceInToken that is larger than lastRecord
+        // was assured in _currentPriceInRING(_auction)
+        // here double check
+        // 1.1*price + bounty - (price + bounty) = 0.1 * price
+        // we dont touch claimBounty
+        uint surplus = _priceInToken.sub(uint256(_auction.lastRecord));
+        uint poolCutAmount = computeCut(surplus, _auctionCut);
+        uint extractFromGap = surplus - poolCutAmount;
+        uint realReturnForEach = extractFromGap / 2;
+
+        // here use transfer(address,uint256) for safety
+        ERC20(_auction.token).transfer(_auction.seller, realReturnForEach);
+        ERC20(_auction.token).transfer(_auction.lastBidder, (realReturnForEach + uint256(_auction.lastRecord)));
+
+        if (_referer != 0x0) {
+            uint refererBounty = computeCut(poolCutAmount, _refererCut);
+            ERC20(_auction.token).transfer(_referer, refererBounty);
+            ERC223(_auction.token).transfer(_pool, (poolCutAmount - refererBounty), toBytes(_buyer));
+        }
+
+        // modify bid-related member variables
+        _auction.lastBidder = _buyer;
+        _auction.lastRecord = uint128(_priceInToken);
+        _auction.lastBidStartAt = now;
+        _auction.lastReferer = _referer;
+
+        return (_auction.lastBidStartAt, (realReturnForEach + uint256(_auction.lastRecord)));
+    }
 
     // TODO: add _token to compatible backwards with ring and eth
     function _bidProcess(address _buyer, Auction storage _auction, uint _priceInToken, address _referer, uint _claimBounty)
     internal
     canBeStoredWith128Bits(_priceInToken)
     returns (uint256, uint256){
-        uint priceWithoutBounty = _priceInToken.sub(_claimBounty);
+
         uint auctionCut = registry.uintOf(AuctionSettingIds.UINT_AUCTION_CUT);
         uint256 refererCut = registry.uintOf(AuctionSettingIds.UINT_REFERER_CUT);
+        address revenuePool = registry.addressOf(AuctionSettingIds.CONTRACT_REVENUE_POOL);
 
         // uint256 refererBounty;
 
         // the first bid
         if (_auction.lastBidder == 0x0 && _priceInToken > 0) {
-            require(now >= uint256(_auction.startedAt));
-            //  Calculate the auctioneer's cut.
-            // (NOTE: computeCut() is guaranteed to return a
-            //  value <= price, so this subtraction can't go negative.)
-            // TODO: token to the seller
-            // we dont touch claimBounty
-            uint256 ownerCutAmount = computeCut(priceWithoutBounty, auctionCut);
 
-            // transfer to the seller
-            ERC20(_auction.token).transfer(_auction.seller, (priceWithoutBounty - ownerCutAmount));
-
-            if (_referer != 0x0) {
-                // refererBounty = computeCut(ownerCut, refererCut);
-                ERC20(_auction.token).transfer(_referer, computeCut(ownerCutAmount, refererCut));
-            }
-
-
-            // modify bid-related member variables
-            _auction.lastBidder = _buyer;
-            _auction.lastRecord = uint128(_priceInToken);
-            _auction.lastBidStartAt = now;
-            _auction.lastReferer = _referer;
-
-            return (_auction.lastBidStartAt, 0);
+            return firstPartBid(auctionCut, refererCut, revenuePool, _buyer, _auction, _priceInToken, _referer, _claimBounty);
         }
 
         // TODO: the math calculation needs further check
         //  not the first bid
         if (_auction.lastRecord > 0 && _auction.lastBidder != 0x0) {
-            // TODO: repair bug of first bid's time limitation
-            // if this the first bid, there is no time limitation
-            require(now <= _auction.lastBidStartAt + registry.uintOf(AuctionSettingIds.UINT_AUCTION_BID_WAITING_TIME), "It's too late.");
 
-            // _priceInToken that is larger than lastRecord
-            // was assured in _currentPriceInRING(_auction)
-            // here double check
-            // 1.1*price + bounty - (price + bounty) = 0.1 * price
-            // we dont touch claimBounty
-            uint extractFromGap = _priceInToken.sub(uint256(_auction.lastRecord) - computeCut(_priceInToken.sub(uint256(_auction.lastRecord)), auctionCut));
-            uint realReturnForEach = extractFromGap / 2;
-
-            ERC20(_auction.token).transfer(_auction.seller, realReturnForEach);
-            ERC20(_auction.token).transfer(_auction.lastBidder, (realReturnForEach + uint256(_auction.lastRecord)));
-
-            if (_referer != 0x0) {
-                // refererBounty = computeCut(extractFromGap, refererCut);
-                ERC20(_auction.token).transfer(_referer, computeCut(extractFromGap, refererCut));
-            }
-
-            // modify bid-related member variables
-            _auction.lastBidder = _buyer;
-            _auction.lastRecord = uint128(_priceInToken);
-            _auction.lastBidStartAt = now;
-            _auction.lastReferer = _referer;
-
-            return (_auction.lastBidStartAt, (realReturnForEach + uint256(_auction.lastRecord)));
+            return secondPartBid(auctionCut, refererCut, revenuePool, _buyer, _auction, _priceInToken, _referer);
         }
 
     }

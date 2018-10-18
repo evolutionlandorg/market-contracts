@@ -100,9 +100,10 @@ contract MysteriousTreasure is Ownable, AuctionSettingIds {
                     // nad totalBoxNotOpened is set by rules
                     // there is no need to consider overflow
                     // goldReward, woodReward, waterReward, fireReward, soilReward
-                    uint resourceReward = seed % (2 * resourcePool[i] / totalBoxNotOpened);
                     // 2 ** 16 - 1
-                    require(resourceReward <= 65535);
+                    uint doubleAverage = (2 * resourcePool[i] / totalBoxNotOpened) % 65535;
+                    uint resourceReward = seed % doubleAverage;
+
                     resourceRewards[i] = uint16(resourceReward);
                     
                     // update resourcePool

@@ -26,8 +26,6 @@ contract GenesisHolder is Ownable, AuctionSettingIds {
     // do not register ring
     mapping (address => bool) registeredToken;
 
-    address public pool;
-
     // claimedToken event
     event ClaimedTokens(address indexed token, address indexed owner, uint amount);
 
@@ -88,6 +86,7 @@ contract GenesisHolder is Ownable, AuctionSettingIds {
     function tokenFallback(address _from, uint _amount, bytes _data) public {
         // double check
         if (msg.sender == address(ring)) {
+            address pool = registry.addressOf(AuctionSettingIds.CONTRACT_REVENUE_POOL);
             ERC223(msg.sender).transfer(pool, _amount, _data);
         }
 

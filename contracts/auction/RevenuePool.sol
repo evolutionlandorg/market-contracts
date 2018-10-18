@@ -8,6 +8,7 @@ import "@evolutionland/common/contracts/interfaces/ERC223.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 
 // Use proxy mode
+// recommond to use RBACWithAuth and add functions to modify tickets
 contract RevenuePool is Ownable, ERC223ReceivingContract, SettingIds {
 
     // 10%
@@ -22,6 +23,9 @@ contract RevenuePool is Ownable, ERC223ReceivingContract, SettingIds {
     ISettingsRegistry public registry;
 
     bool private singletonLock = false;
+
+    // tickets
+    mapping (address => uint256) tickets;
 
 
     // claimedToken event
@@ -46,7 +50,8 @@ contract RevenuePool is Ownable, ERC223ReceivingContract, SettingIds {
         address ring = registry.addressOf(SettingIds.CONTRACT_RING_ERC20_TOKEN);
 
         if(msg.sender == ring) {
-            return;
+            address buyer = bytesToAddress(_data);
+            tickets[buyer] += _value;
         }
     }
 
@@ -84,6 +89,15 @@ contract RevenuePool is Ownable, ERC223ReceivingContract, SettingIds {
         token.transfer(owner, balance);
 
         emit ClaimedTokens(_token, owner, balance);
+    }
+
+    function bytesToAddress(bytes b) public pure returns (address) {
+        bytes32 out;
+
+        for (uint i = 0; i < 32; i++) {
+            out |= bytes32(b[i] & 0xFF) >> (i * 8);
+        }
+        return address(out);
     }
 
 
