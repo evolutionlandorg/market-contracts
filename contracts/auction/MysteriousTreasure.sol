@@ -1,12 +1,13 @@
 pragma solidity ^0.4.23;
 
-import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "@evolutionland/common/contracts/interfaces/ISettingsRegistry.sol";
+import "@evolutionland/common/contracts/DSAuth.sol";
 import "@evolutionland/land/contracts/interfaces/ILandBase.sol";
+import "./interfaces/IMysteriousTreasure.sol";
 import "./AuctionSettingIds.sol";
 
-contract MysteriousTreasure is Ownable, AuctionSettingIds {
+contract MysteriousTreasure is DSAuth, AuctionSettingIds, IMysteriousTreasure {
     bool private singletonLock = false;
 
     using SafeMath for *;
@@ -53,7 +54,7 @@ contract MysteriousTreasure is Ownable, AuctionSettingIds {
     // this is invoked in auction.claimLandAsset
     function unbox(uint256 _tokenId)
     public
-    onlyOwner
+    auth
     returns (uint, uint, uint, uint, uint) {
         ILandBase landBase = ILandBase(registry.addressOf(SettingIds.CONTRACT_LAND_BASE));
         if(! landBase.isHasBox(_tokenId) ) {
@@ -150,11 +151,11 @@ contract MysteriousTreasure is Ownable, AuctionSettingIds {
         resourcePool[_keyNumber] = _resources;
     }
 
-    function setResourcePool(uint _keyNumber, uint _resources) public onlyOwner {
+    function setResourcePool(uint _keyNumber, uint _resources) public auth {
         _setResourcePool(_keyNumber, _resources);
     }
 
-    function setTotalBoxNotOpened(uint _totalBox) public onlyOwner {
+    function setTotalBoxNotOpened(uint _totalBox) public auth {
         // after last round reward ended
         require(totalBoxNotOpened == 0);
         totalBoxNotOpened = _totalBox;

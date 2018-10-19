@@ -1,17 +1,18 @@
 pragma solidity ^0.4.23;
 
 import "./interfaces/IMysteriousTreasure.sol";
-import "@evolutionland/common/contracts/interfaces/ERC223.sol";
 import "openzeppelin-solidity/contracts/lifecycle/Pausable.sol";
 import "openzeppelin-solidity/contracts/token/ERC721/ERC721Basic.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "@evolutionland/common/contracts/interfaces/ISettingsRegistry.sol";
+import "@evolutionland/common/contracts/interfaces/ERC223.sol";
+import "@evolutionland/common/contracts/PausableDSAuth.sol";
 import "@evolutionland/land/contracts/interfaces/ILandBase.sol";
 import "./AuctionSettingIds.sol";
 import "./interfaces/IBancorExchange.sol";
 
-contract ClockAuction is Pausable, AuctionSettingIds {
+contract ClockAuction is PausableDSAuth, AuctionSettingIds {
     using SafeMath for *;
     event AuctionCreated(uint256 tokenId, address seller, uint256 startingPriceInToken, uint256 endingPriceInToken, uint256 duration, address token);
     event AuctionSuccessful(uint256 tokenId, uint256 totalPrice, address winner);
@@ -52,13 +53,10 @@ contract ClockAuction is Pausable, AuctionSettingIds {
 
     bool private singletonLock = false;
 
-    ISettingsRegistry registry;
+    ISettingsRegistry public registry;
 
     // Map from token ID to their corresponding auction.
-    mapping(uint256 => Auction) tokenIdToAuction;
-
-    // genesis landholder, pangu is the creator of all in certain version of Chinese mythology.
-    address public pangu;
+    mapping(uint256 => Auction) public tokenIdToAuction;
 
     /*
     *  Modifiers
@@ -102,16 +100,12 @@ contract ClockAuction is Pausable, AuctionSettingIds {
     ///  and verifies the owner cut is in the valid range.
     ///  bidWaitingMinutes - biggest waiting time from a bid's starting to ending(in minutes)
     function initializeContract(
-        address _pangu,
         ISettingsRegistry _registry) public singletonLockCall {
 
         owner = msg.sender;
+        emit LogSetOwner(msg.sender);
 
         registry = _registry;
-        // NOTE: to make auction work well
-        // set address of bancorExchange in registry first
-        pangu = _pangu;
-
     }
 
     /// @dev DON'T give me your money.
@@ -127,11 +121,9 @@ contract ClockAuction is Pausable, AuctionSettingIds {
         uint256 _endingPriceInToken,
         uint256 _duration,
         uint256 _startAt,
-        address _token)
-    public
+        address _token) // with any token
+    public auth
     canBeStoredWith64Bits(_startAt) {
-        require(msg.sender == pangu, "only pangu can call this");
-
         _createAuction(msg.sender, _tokenId, _startingPriceInToken, _endingPriceInToken, _duration, _startAt, msg.sender, _token);
     }
 
@@ -451,16 +443,16 @@ contract ClockAuction is Pausable, AuctionSettingIds {
     ) {
         Auction storage auction = tokenIdToAuction[_tokenId];
         return (
-        auction.seller,
-        auction.startingPriceInToken,
-        auction.endingPriceInToken,
-        auction.duration,
-        auction.startedAt,
-        auction.token,
-        auction.lastRecord,
-        auction.lastBidder,
-        auction.lastBidStartAt,
-        auction.lastReferer
+            auction.seller,
+            auction.startingPriceInToken,
+            auction.endingPriceInToken,
+            auction.duration,
+            auction.startedAt,
+            auction.token,
+            auction.lastRecord,
+            auction.lastBidder,
+            auction.lastBidStartAt,
+            auction.lastReferer
         );
     }
 
@@ -531,12 +523,7 @@ contract ClockAuction is Pausable, AuctionSettingIds {
         return getCurrentPriceInToken(_tokenId);
     }
 
-    function transferTreasureOwnership(address _newOwner) public onlyOwner {
-        IMysteriousTreasure mysteriousTreasure = IMysteriousTreasure(registry.addressOf(AuctionSettingIds.CONTRACT_MYSTERIOUS_TREASURE));
-        mysteriousTreasure.transferOwnership(_newOwner);
-    }
-
-        /// @dev Creates and begins a new auction.
+    /// @dev Creates and begins a new auction.
     /// @param _tokenId - ID of token to auction, sender must be owner.
     //  NOTE: change _startingPrice and _endingPrice in from wei to ring for user-friendly reason
     /// @param _startingPriceInToken - Price of item (in token) at beginning of auction.
@@ -634,5 +621,4 @@ contract ClockAuction is Pausable, AuctionSettingIds {
         b = new bytes(32);
         assembly { mstore(add(b, 32), x) }
     }
-
 }
