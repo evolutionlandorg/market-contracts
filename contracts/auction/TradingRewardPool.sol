@@ -24,6 +24,11 @@ contract TradingRewardPool is DSAuth, ITradingRewardPool, AuctionSettingIds {
 
     uint256 public totalTicketAmount;
 
+    modifier isHuman() {
+        require(msg.sender == tx.origin, "robot is not permitted");
+        _;
+    }
+
     /*
      *  Modifiers
      */
@@ -40,9 +45,7 @@ contract TradingRewardPool is DSAuth, ITradingRewardPool, AuctionSettingIds {
         registry = ISettingsRegistry(_registry);
     }
 
-    function claimTicketReward() public {
-        require(msg.sender == tx.origin, "Robot is not allowed.");
-
+    function claimTicketReward() public isHuman {
         address revenuePool = registry.addressOf(AuctionSettingIds.CONTRACT_REVENUE_POOL);
 
         RevenuePool(revenuePool)

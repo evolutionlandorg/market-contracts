@@ -12,6 +12,16 @@ import "./interfaces/IBancorExchange.sol";
 /// @title Auction Core
 /// @dev Contains models, variables, and internal methods for the auction.
 contract ClockAuctionBase is Pausable, AuctionSettingIds {
+    event AuctionCreated(uint256 tokenId, address seller, uint256 startingPriceInToken, uint256 endingPriceInToken, uint256 duration, address token);
+    event AuctionSuccessful(uint256 tokenId, uint256 totalPrice, address winner);
+    event AuctionCancelled(uint256 tokenId);
+
+    // claimedToken event
+    event ClaimedTokens(address indexed token, address indexed owner, uint amount);
+
+    // new bid event
+    event NewBid(uint256 indexed tokenId, address lastBidder, address lastReferer, uint256 lastRecord, address tokenAddress, uint256 bidStartAt, uint256 returnToLastBidder);
+
     using SafeMath for *;
     uint constant COIN = 10**18;
 
@@ -45,30 +55,11 @@ contract ClockAuctionBase is Pausable, AuctionSettingIds {
 
     ISettingsRegistry registry;
 
-    // Reference to contract tracking NFT ownership
-    ERC721Basic public nonFungibleContract;
-
     // Map from token ID to their corresponding auction.
     mapping(uint256 => Auction) tokenIdToAuction;
 
-    //add address of RING
-    ERC20 public RING;
-
-    // address of bancorExchange which exchange eth to ring or ring to eth
-    // IBancorExchange public bancorExchange;
-
     // genesis landholder, pangu is the creator of all in certain version of Chinese mythology.
     address public pangu;
-
-    event AuctionCreated(uint256 tokenId, address seller, uint256 startingPriceInToken, uint256 endingPriceInToken, uint256 duration, address token);
-    event AuctionSuccessful(uint256 tokenId, uint256 totalPrice, address winner);
-    event AuctionCancelled(uint256 tokenId);
-
-    // claimedToken event
-    event ClaimedTokens(address indexed token, address indexed owner, uint amount);
-
-    // new bid event
-    event NewBid(uint256 indexed tokenId, address lastBidder, address lastReferer, uint256 lastRecord, address tokenAddress, uint256 bidStartAt, uint256 returnToLastBidder);
 
     /// @dev DON'T give me your money.
     function() external {}
@@ -110,10 +101,8 @@ contract ClockAuctionBase is Pausable, AuctionSettingIds {
     canBeStoredWith64Bits(_duration)
     canBeStoredWith64Bits(_startAt)
     {
-        require((nonFungibleContract.ownerOf(_tokenId) == _from), "you are not the owner, dont do this.");
-
-        // escrow
-        nonFungibleContract.safeTransferFrom(_from, this, _tokenId);
+        require(_startingPriceInToken <= 1000000000 * COIN && _endingPriceInToken <= 1000000000 * COIN);
+        require(_duration <= 1000 days);
 
         Auction memory auction = Auction(
             _seller,
@@ -151,14 +140,6 @@ contract ClockAuctionBase is Pausable, AuctionSettingIds {
             _auction.token
         );
     }
-
-    /// @dev Cancels an auction unconditionally.
-    function _cancelAuction(uint256 _tokenId, address _seller) internal {
-        _removeAuction(_tokenId);
-        nonFungibleContract.safeTransferFrom(this, _seller, _tokenId);
-        emit AuctionCancelled(_tokenId);
-    }
-
 
     /// @dev Removes an auction from the list of open auctions.
     /// @param _tokenId - ID of NFT on auction.
@@ -248,11 +229,6 @@ contract ClockAuctionBase is Pausable, AuctionSettingIds {
 
             return uint256(currentPriceInToken);
         }
-    }
-
-
-    function _setPangu(address _pangu) internal {
-        pangu = _pangu;
     }
 
 

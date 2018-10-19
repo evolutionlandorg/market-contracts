@@ -20,12 +20,6 @@ contract GenesisHolder is Ownable, AuctionSettingIds {
     // the account who creates auctions
     address public operator;
 
-    ERC20 public ring;
-
-    // registered land-related token to this
-    // do not register ring
-    mapping (address => bool) registeredToken;
-
     // claimedToken event
     event ClaimedTokens(address indexed token, address indexed owner, uint amount);
 
@@ -43,12 +37,10 @@ contract GenesisHolder is Ownable, AuctionSettingIds {
         // initializeContract
     }
 
-    function initializeContract(ISettingsRegistry _registry, address _ring) public singletonLockCall {
+    function initializeContract(ISettingsRegistry _registry) public singletonLockCall {
         owner = msg.sender;
 
         registry = _registry;
-        _setRing(_ring);
-
     }
 
     function createAuction(
@@ -62,13 +54,7 @@ contract GenesisHolder is Ownable, AuctionSettingIds {
 
         require(msg.sender == operator);
 
-        // reserved land do not allow ring for genesis auction
-        if (ILandBase(registry.addressOf(SettingIds.CONTRACT_LAND_BASE)).isReserved(_tokenId)) {
-            require(_token != address(ring));
-        }
-
         IClockAuction auction = IClockAuction(registry.addressOf(AuctionSettingIds.CONTRACT_CLOCK_AUCTION));
-
 
         // aprove land to auction contract
         ERC721Basic(registry.addressOf(SettingIds.CONTRACT_OBJECT_OWNERSHIP)).approve(address(auction), _tokenId);
@@ -81,20 +67,6 @@ contract GenesisHolder is Ownable, AuctionSettingIds {
     function cancelAuction(uint256 _tokenId) public onlyOwner {
         IClockAuction auction = IClockAuction(registry.addressOf(AuctionSettingIds.CONTRACT_CLOCK_AUCTION));
         auction.cancelAuction(_tokenId);
-    }
-
-    function tokenFallback(address _from, uint _amount, bytes _data) public {
-        // double check
-        if (msg.sender == address(ring)) {
-            address pool = registry.addressOf(AuctionSettingIds.CONTRACT_REVENUE_POOL);
-            ERC223(msg.sender).transfer(pool, _amount, _data);
-        }
-
-        if (registeredToken[msg.sender] == true) {
-            // burn token after receiving it
-            // remember give address(this) authority to burn
-            IBurnableERC20(msg.sender).burn(address(this), _amount);
-        }
     }
 
     /// @notice This method can be used by the owner to extract mistakenly
@@ -111,24 +83,6 @@ contract GenesisHolder is Ownable, AuctionSettingIds {
         token.transfer(owner, balance);
 
         emit ClaimedTokens(_token, owner, balance);
-    }
-
-
-    function registerToken(address _token) public onlyOwner {
-        registeredToken[_token] = true;
-    }
-
-    function unregisterToken(address _token) public onlyOwner {
-        require(registeredToken[_token] == true);
-        registeredToken[_token] = false;
-    }
-
-    function setRing(address _ring) public onlyOwner {
-        _setRing(_ring);
-    }
-
-    function _setRing(address _ring) internal {
-        ring = ERC20(_ring);
     }
 
     function setOperator(address _operator) public onlyOwner {

@@ -26,35 +26,23 @@ contract ClockAuction is ClockAuctionBase {
     ///////////////////////
     // Constructor
     ///////////////////////
-
-
     constructor() public {
         // initializeContract
     }
 
     /// @dev Constructor creates a reference to the NFT ownership contract
     ///  and verifies the owner cut is in the valid range.
-    /// @param _nftAddress - address of a deployed contract implementing
-    ///  the Nonfungible Interface.
     ///  bidWaitingMinutes - biggest waiting time from a bid's starting to ending(in minutes)
     function initializeContract(
-        address _nftAddress,
         address _pangu,
         ISettingsRegistry _registry) public singletonLockCall {
 
         owner = msg.sender;
 
-        ERC721Basic candidateContract = ERC721Basic(_nftAddress);
-        // InterfaceId_ERC721 = 0x80ac58cd;
-        // require(candidateContract.supportsInterface(0x80ac58cd));
-
-        nonFungibleContract = candidateContract;
         registry = _registry;
-
-        RING = ERC20(registry.addressOf(SettingIds.CONTRACT_RING_ERC20_TOKEN));
         // NOTE: to make auction work well
         // set address of bancorExchange in registry first
-        _setPangu(_pangu);
+        pangu = _pangu;
 
     }
 
@@ -71,12 +59,11 @@ contract ClockAuction is ClockAuctionBase {
         address _token)
     public
     canBeStoredWith64Bits(_startAt) {
-
         require(msg.sender == pangu, "only pangu can call this");
 
-        require(_startingPriceInToken <= 1000000000 * COIN && _endingPriceInToken <= 1000000000 * COIN);
-        require(_duration <= 1000 days);
-        // pangu can only set its own as seller
+        // escrow
+        ERC721Basic(registry.addressOf(SettingIds.CONTRACT_OBJECT_OWNERSHIP)).safeTransferFrom(msg.sender, this, _tokenId);
+
         _createAuction(msg.sender, _tokenId, _startingPriceInToken, _endingPriceInToken, _duration, _startAt, msg.sender, _token);
     }
 
@@ -96,7 +83,11 @@ contract ClockAuction is ClockAuctionBase {
 
         // once someone has bidden for this auction, no one has the right to cancel it.
         require(auction.lastBidder == 0x0);
-        _cancelAuction(_tokenId, seller);
+
+        _removeAuction(_tokenId);
+
+        ERC721Basic(registry.addressOf(SettingIds.CONTRACT_OBJECT_OWNERSHIP)).safeTransferFrom(this, seller, _tokenId);
+        emit AuctionCancelled(_tokenId);
     }
 
     //@dev only NFT contract can invoke this
@@ -109,7 +100,7 @@ contract ClockAuction is ClockAuctionBase {
     public
     whenNotPaused
     {
-        if (msg.sender == address(nonFungibleContract)) {
+        if (msg.sender == registry.addressOf(SettingIds.CONTRACT_OBJECT_OWNERSHIP)) {
             uint256 startingPriceInRING;
             uint256 endingPriceInRING;
             uint256 duration;
@@ -123,11 +114,9 @@ contract ClockAuction is ClockAuctionBase {
                 duration := mload(add(ptr, 196))
                 seller := mload(add(ptr, 228))
             }
-            require(startingPriceInRING <= 1000000000 * COIN && endingPriceInRING <= 1000000000 * COIN);
-            require(duration <= 1000 days);
-            uint startAt = now;
+
             // TODO: add parameter _token
-            _createAuction(_from, _tokenId, startingPriceInRING, endingPriceInRING, duration, startAt, seller, address(RING));
+            _createAuction(_from, _tokenId, startingPriceInRING, endingPriceInRING, duration, now, seller, registry.addressOf(SettingIds.CONTRACT_RING_ERC20_TOKEN));
         }
 
     }
@@ -152,7 +141,7 @@ contract ClockAuction is ClockAuctionBase {
         // Get a reference to the auction struct
         Auction storage auction = tokenIdToAuction[_tokenId];
         // can only bid the auction that allows ring
-        require(auction.token == address(RING));
+        require(auction.token == registry.addressOf(SettingIds.CONTRACT_RING_ERC20_TOKEN));
 
         // Explicitly check that this auction is currently live.
         // (Because of how Ethereum mappings work, we can't just count
@@ -178,7 +167,7 @@ contract ClockAuction is ClockAuctionBase {
         if (refund > 0) {
             // if there is surplus RING
             // then give it back to the msg.sender
-            RING.transfer(msg.sender, refund);
+            ERC20(registry.addressOf(SettingIds.CONTRACT_RING_ERC20_TOKEN)).transfer(msg.sender, refund);
         }
 
         uint bidMoment;
@@ -264,7 +253,7 @@ contract ClockAuction is ClockAuctionBase {
         //prevent re-entry attack
         _removeAuction(_tokenId);
 
-        nonFungibleContract.safeTransferFrom(this, lastBidder, _tokenId);
+        ERC721Basic(registry.addressOf(SettingIds.CONTRACT_OBJECT_OWNERSHIP)).safeTransferFrom(this, lastBidder, _tokenId);
 
         emit AuctionSuccessful(_tokenId, lastRecord, lastBidder);
     }
@@ -445,11 +434,6 @@ contract ClockAuction is ClockAuctionBase {
         return bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"));
     }
 
-    function setPangu(address _pangu) public onlyOwner {
-        _setPangu(_pangu);
-    }
-
-
     // get auction's price of last bidder offered
     // @dev return price of _auction (in RING)
     function getLastRecord(uint _tokenId) public view returns (uint256) {
@@ -468,11 +452,6 @@ contract ClockAuction is ClockAuctionBase {
     function computeNextBidRecord(uint _tokenId) public view returns (uint256) {
         return _currentPriceInToken(tokenIdToAuction[_tokenId]);
     }
-
-    function updateRING() public onlyOwner {
-        RING = ERC20(registry.addressOf(SettingIds.CONTRACT_RING_ERC20_TOKEN));
-    }
-
 
     function transferTreasureOwnership(address _newOwner) public onlyOwner {
         IMysteriousTreasure mysteriousTreasure = IMysteriousTreasure(registry.addressOf(AuctionSettingIds.CONTRACT_MYSTERIOUS_TREASURE));
