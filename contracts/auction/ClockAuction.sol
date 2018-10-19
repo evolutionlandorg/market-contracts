@@ -1,12 +1,64 @@
 pragma solidity ^0.4.23;
 
-import "./ClockAuctionBase.sol";
 import "./interfaces/IMysteriousTreasure.sol";
 import "@evolutionland/common/contracts/interfaces/ERC223.sol";
+import "openzeppelin-solidity/contracts/lifecycle/Pausable.sol";
+import "openzeppelin-solidity/contracts/token/ERC721/ERC721Basic.sol";
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
+import "@evolutionland/common/contracts/interfaces/ISettingsRegistry.sol";
+import "@evolutionland/land/contracts/interfaces/ILandBase.sol";
+import "./AuctionSettingIds.sol";
+import "./interfaces/IBancorExchange.sol";
 
-contract ClockAuction is ClockAuctionBase {
+contract ClockAuction is Pausable, AuctionSettingIds {
+    using SafeMath for *;
+    event AuctionCreated(uint256 tokenId, address seller, uint256 startingPriceInToken, uint256 endingPriceInToken, uint256 duration, address token);
+    event AuctionSuccessful(uint256 tokenId, uint256 totalPrice, address winner);
+    event AuctionCancelled(uint256 tokenId);
+
+    // claimedToken event
+    event ClaimedTokens(address indexed token, address indexed owner, uint amount);
+
+    // new bid event
+    event NewBid(uint256 indexed tokenId, address lastBidder, address lastReferer, uint256 lastRecord, address tokenAddress, uint256 bidStartAt, uint256 returnToLastBidder);
+
+    // Represents an auction on an NFT
+    struct Auction {
+        // Current owner of NFT
+        address seller;
+        // Price (in token) at beginning of auction
+        uint128 startingPriceInToken;
+        // Price (in token) at end of auction
+        uint128 endingPriceInToken;
+        // Duration (in seconds) of auction
+        uint64 duration;
+        // Time when auction started
+        // NOTE: 0 if this auction has been concluded
+        uint64 startedAt;
+        // bid the auction through which token
+        address token;
+
+        // it saves gas in this order
+        // highest offered price (in RING)
+        uint128 lastRecord;
+        // bidder who offer the highest price
+        address lastBidder;
+        // latestBidder's bidTime in timestamp
+        uint256 lastBidStartAt;
+        // lastBidder's referer
+        address lastReferer;
+    }
 
     bool private singletonLock = false;
+
+    ISettingsRegistry registry;
+
+    // Map from token ID to their corresponding auction.
+    mapping(uint256 => Auction) tokenIdToAuction;
+
+    // genesis landholder, pangu is the creator of all in certain version of Chinese mythology.
+    address public pangu;
 
     /*
     *  Modifiers
@@ -22,6 +74,22 @@ contract ClockAuction is ClockAuctionBase {
         _;
     }
 
+        // Modifiers to check that inputs can be safely stored with a certain
+    // number of bits. We use constants and multiple modifiers to save gas.
+    modifier canBeStoredWith64Bits(uint256 _value) {
+        require(_value <= 18446744073709551615);
+        _;
+    }
+
+    modifier canBeStoredWith128Bits(uint256 _value) {
+        require(_value < 340282366920938463463374607431768211455);
+        _;
+    }
+
+    modifier isOnAuction(uint256 _tokenId) {
+        require(tokenIdToAuction[_tokenId].startedAt > 0);
+        _;
+    }
 
     ///////////////////////
     // Constructor
@@ -45,6 +113,9 @@ contract ClockAuction is ClockAuctionBase {
         pangu = _pangu;
 
     }
+
+    /// @dev DON'T give me your money.
+    function() external {}
 
     ///////////////////////
     // Auction Create and Cancel
@@ -72,11 +143,9 @@ contract ClockAuction is ClockAuctionBase {
     /// @notice This is a state-modifying function that can
     ///  be called while the contract is paused.
     /// @param _tokenId - ID of token on auction
-    function cancelAuction(uint256 _tokenId)
-    public
+    function cancelAuction(uint256 _tokenId) public isOnAuction(_tokenId)
     {
         Auction storage auction = tokenIdToAuction[_tokenId];
-        require(_isOnAuction(auction));
 
         address seller = auction.seller;
         require((msg.sender == seller && !paused) || msg.sender == owner);
@@ -84,7 +153,7 @@ contract ClockAuction is ClockAuctionBase {
         // once someone has bidden for this auction, no one has the right to cancel it.
         require(auction.lastBidder == 0x0);
 
-        _removeAuction(_tokenId);
+        delete tokenIdToAuction[_tokenId];
 
         ERC721Basic(registry.addressOf(SettingIds.CONTRACT_OBJECT_OWNERSHIP)).safeTransferFrom(this, seller, _tokenId);
         emit AuctionCancelled(_tokenId);
@@ -135,6 +204,7 @@ contract ClockAuction is ClockAuctionBase {
     payable
     whenNotPaused
     isHuman
+    isOnAuction(_tokenId)
     returns (uint256)
     {
         require(msg.value > 0);
@@ -143,15 +213,9 @@ contract ClockAuction is ClockAuctionBase {
         // can only bid the auction that allows ring
         require(auction.token == registry.addressOf(SettingIds.CONTRACT_RING_ERC20_TOKEN));
 
-        // Explicitly check that this auction is currently live.
-        // (Because of how Ethereum mappings work, we can't just count
-        // on the lookup above failing. An invalid _tokenId will just
-        // return an auction object that is all zeros.)
-        require(_isOnAuction(auction));
-
         // Check that the incoming bid is higher than the current
         // price
-        uint256 priceInRING = _currentPriceInToken(auction);
+        uint256 priceInRING = getCurrentPriceInToken(_tokenId);
         // assure msg.value larger than current price in ring
         // priceInRING represents minimum return
         // if return is smaller than priceInRING
@@ -188,7 +252,7 @@ contract ClockAuction is ClockAuctionBase {
         Auction storage auction = tokenIdToAuction[_tokenId];
 
         // Check that the incoming bid is higher than the current price
-        uint priceInToken = _currentPriceInToken(auction);
+        uint priceInToken = getCurrentPriceInToken(_tokenId);
         require(_valueInToken >= priceInToken,
             "your offer is lower than the current price, try again with a higher one.");
         uint refund = _valueInToken - priceInToken;
@@ -222,21 +286,19 @@ contract ClockAuction is ClockAuctionBase {
             referer := mload(add(ptr, 164))
         }
 
-        Auction storage auction = tokenIdToAuction[tokenId];
-        require(_isOnAuction(auction));
-
         // safer for users
-        require (msg.sender == auction.token);
+        require (msg.sender == tokenIdToAuction[tokenId].token);
+        require(tokenIdToAuction[tokenId].startedAt > 0);
+
         _bidWithToken(_from, tokenId, _valueInToken, referer);
     }
 
     // TODO: advice: offer some reward for the person who claimed
     // @dev claim _tokenId for auction's lastBidder
-    function claimLandAsset(uint _tokenId) public isHuman {
+    function claimLandAsset(uint _tokenId) public isHuman isOnAuction(_tokenId) {
         // Get a reference to the auction struct
         Auction storage auction = tokenIdToAuction[_tokenId];
 
-        require(_isOnAuction(auction));
         // at least bidWaitingTime after last bidder's bid moment,
         // and no one else has bidden during this bidWaitingTime,
         // then any one can claim this token(land) for lastBidder.
@@ -246,12 +308,10 @@ contract ClockAuction is ClockAuctionBase {
         IMysteriousTreasure mysteriousTreasure = IMysteriousTreasure(registry.addressOf(AuctionSettingIds.CONTRACT_MYSTERIOUS_TREASURE));
         mysteriousTreasure.unbox(_tokenId);
 
-        ERC20 token = ERC20(auction.token);
         address lastBidder = auction.lastBidder;
         uint lastRecord = auction.lastRecord;
 
-        //prevent re-entry attack
-        _removeAuction(_tokenId);
+        delete tokenIdToAuction[_tokenId];
 
         ERC721Basic(registry.addressOf(SettingIds.CONTRACT_OBJECT_OWNERSHIP)).safeTransferFrom(this, lastBidder, _tokenId);
 
@@ -394,7 +454,6 @@ contract ClockAuction is ClockAuctionBase {
         address lastReferer
     ) {
         Auction storage auction = tokenIdToAuction[_tokenId];
-        require(_isOnAuction(auction));
         return (
         auction.seller,
         auction.startingPriceInToken,
@@ -410,16 +469,39 @@ contract ClockAuction is ClockAuctionBase {
     }
 
     /// @dev Returns the current price of an auction.
-    /// 
+    /// Returns current price of an NFT on auction. Broken into two
+    ///  functions (this one, that computes the duration from the auction
+    ///  structure, and the other that does the price computation) so we
+    ///  can easily test that the price computation works correctly.
     /// @param _tokenId - ID of the token price we are checking.
     function getCurrentPriceInToken(uint256 _tokenId)
     public
     view
     returns (uint256)
     {
-        Auction storage auction = tokenIdToAuction[_tokenId];
-        require(_isOnAuction(auction));
-        return _currentPriceInToken(auction);
+        uint256 secondsPassed = 0;
+
+        // A bit of insurance against negative values (or wraparound).
+        // Probably not necessary (since Ethereum guarnatees that the
+        // now variable doesn't ever go backwards).
+        if (now > tokenIdToAuction[_tokenId].startedAt) {
+            secondsPassed = now - tokenIdToAuction[_tokenId].startedAt;
+        }
+        // if no one has bidden for _auction, compute the price as below.
+        if (tokenIdToAuction[_tokenId].lastRecord == 0) {
+            return _computeCurrentPriceInToken(
+                tokenIdToAuction[_tokenId].startingPriceInToken,
+                tokenIdToAuction[_tokenId].endingPriceInToken,
+                tokenIdToAuction[_tokenId].duration,
+                secondsPassed
+            );
+        } else {
+            // compatible with first bid
+            // as long as price_offered_by_buyer >= 1.1 * currentPice,
+            // this buyer will be the lastBidder
+            // 1.1 * (lastRecord)
+            return (11 * (uint256(tokenIdToAuction[_tokenId].lastRecord)) / 10);
+        }
     }
 
     // to apply for the safeTransferFrom
@@ -450,12 +532,108 @@ contract ClockAuction is ClockAuctionBase {
 
     // @dev if someone new wants to bid, the lowest price he/she need to afford
     function computeNextBidRecord(uint _tokenId) public view returns (uint256) {
-        return _currentPriceInToken(tokenIdToAuction[_tokenId]);
+        return getCurrentPriceInToken(_tokenId);
     }
 
     function transferTreasureOwnership(address _newOwner) public onlyOwner {
         IMysteriousTreasure mysteriousTreasure = IMysteriousTreasure(registry.addressOf(AuctionSettingIds.CONTRACT_MYSTERIOUS_TREASURE));
         mysteriousTreasure.transferOwnership(_newOwner);
+    }
+
+        /// @dev Creates and begins a new auction.
+    /// @param _tokenId - ID of token to auction, sender must be owner.
+    //  NOTE: change _startingPrice and _endingPrice in from wei to ring for user-friendly reason
+    /// @param _startingPriceInToken - Price of item (in token) at beginning of auction.
+    /// @param _endingPriceInToken - Price of item (in token) at end of auction.
+    /// @param _duration - Length of time to move between starting
+    ///  price and ending price (in seconds).
+    /// @param _seller - Seller, if not the message sender
+    function _createAuction(
+        address _from,
+        uint256 _tokenId,
+        uint256 _startingPriceInToken,
+        uint256 _endingPriceInToken,
+        uint256 _duration,
+        uint256 _startAt,
+        address _seller,
+        address _token
+    )
+    internal
+    whenNotPaused
+    canBeStoredWith128Bits(_startingPriceInToken)
+    canBeStoredWith128Bits(_endingPriceInToken)
+    canBeStoredWith64Bits(_duration)
+    canBeStoredWith64Bits(_startAt)
+    {
+        require(_startingPriceInToken <= (1000000000 ether) && _endingPriceInToken <= (1000000000 ether));
+        // Require that all auctions have a duration of
+        // at least one minute. (Keeps our math from getting hairy!)
+        require(_duration >= 1 minutes, "duration must be at least 1 minutes");
+        require(_duration <= 1000 days);
+
+        tokenIdToAuction[_tokenId] = Auction({
+            seller: _seller,
+            startingPriceInToken: uint128(_startingPriceInToken),
+            endingPriceInToken: uint128(_endingPriceInToken),
+            duration: uint64(_duration),
+            startedAt: uint64(_startAt),
+            token: _token,
+            // which refer to lastRecord, lastBidder, lastBidStartAt,lastReferer
+            // all set to zero when initialized
+            lastRecord: 0,
+            lastBidder: address(0),
+            lastBidStartAt: 0,
+            lastReferer: address(0)
+        });
+
+        emit AuctionCreated(_tokenId, _seller, _startingPriceInToken, _endingPriceInToken, _duration, _token);
+    }
+
+    /// @dev Computes the current price of an auction. Factored out
+    ///  from _currentPrice so we can run extensive unit tests.
+    ///  When testing, make this function public and turn on
+    ///  `Current price computation` test suite.
+    function _computeCurrentPriceInToken(
+        uint256 _startingPriceInToken,
+        uint256 _endingPriceInToken,
+        uint256 _duration,
+        uint256 _secondsPassed
+    )
+    internal
+    pure
+    returns (uint256)
+    {
+        // NOTE: We don't use SafeMath (or similar) in this function because
+        //  all of our public functions carefully cap the maximum values for
+        //  time (at 64-bits) and currency (at 128-bits). _duration is
+        //  also known to be non-zero (see the require() statement in
+        //  _addAuction())
+        if (_secondsPassed >= _duration) {
+            // We've reached the end of the dynamic pricing portion
+            // of the auction, just return the end price.
+            return _endingPriceInToken;
+        } else {
+            // Starting price can be higher than ending price (and often is!), so
+            // this delta can be negative.
+            int256 totalPriceInTokenChange = int256(_endingPriceInToken) - int256(_startingPriceInToken);
+
+            // This multiplication can't overflow, _secondsPassed will easily fit within
+            // 64-bits, and totalPriceChange will easily fit within 128-bits, their product
+            // will always fit within 256-bits.
+            int256 currentPriceInTokenChange = totalPriceInTokenChange * int256(_secondsPassed) / int256(_duration);
+
+            // currentPriceChange can be negative, but if so, will have a magnitude
+            // less that _startingPrice. Thus, this result will always end up positive.
+            int256 currentPriceInToken = int256(_startingPriceInToken) + currentPriceInTokenChange;
+
+            return uint256(currentPriceInToken);
+        }
+    }
+
+
+    function toBytes(address x) public pure returns (bytes b) {
+        b = new bytes(32);
+        assembly { mstore(add(b, 32), x) }
     }
 
 }
