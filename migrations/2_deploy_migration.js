@@ -6,84 +6,188 @@ const GenesisHolder = artifacts.require('GenesisHolder')
 const LandBase = artifacts.require('LandBase');
 const ObjectOwnership = artifacts.require('ObjectOwnership');
 const ClockAuction = artifacts.require('ClockAuction')
+const Proxy = artifacts.require('OwnedUpgradeabilityProxy');
+const LandBaseAuthority = artifacts.require('LandBaseAuthority');
+const RevenuePool = artifacts.require('RevenuePool');
+const SmartTokenAuthority = artifacts.require('SmartTokenAuthority');
+const TradingRewardPoolAuthority = artifacts.require('TradingRewardPoolAuthority');
+const TradingRewardPool = artifacts.require('TradingRewardPool');
 
 // bancor related
-const RING = artifacts.require('StandardERC223');
+const StandardERC223 = artifacts.require('StandardERC223');
+// const RING = artifacts.require('ERC223SmartToken');
 const BancorConverter = artifacts.require('BancorConverter');
 const BancorFormula = artifacts.require('BancorFormula');
 const BancorGasPriceLimit = artifacts.require('BancorGasPriceLimit');
 const EtherToken = artifacts.require('EtherToken');
 const ContractFeatures = artifacts.require('ContractFeatures');
-const ContractRegistry = artifacts.require('ContractRegistry');
 const WhiteList = artifacts.require('Whitelist');
 const BancorNetwork = artifacts.require('BancorNetwork');
 const BancorExchange = artifacts.require('BancorExchange');
 const ContractIds = artifacts.require('ContractIds');
 const FeatureIds = artifacts.require('FeatureIds');
 
-var BancorAddress = {
-    ContractRegistry: '0x3d53a3fa6f8ceb8406646c3e8c998a70ee1bb0dd',
-    ContractIds: '0x1d29342f6280c7016e847b9040b43208f930dc3a',
-    ContractFeatures: '0x42ba40709deb1290ab29e256c9ede32d8907702c',
-    BancorFormula: '0xff654eb1a520756d5fdc356b935c8b5502fb208a',
-    Whitelist: '0x1c452d1803270d46b6ece2d07b71472a3d2967b8',
-    BancorGasPriceLimit: '0x50cf1e6f96570f5bc4be6ed56b6dbcba0cb48e00',
-    EtherToken: '0x5e573d9e960c83ab0c081e0935780e5320c37ead',
-    RING: '0x85eecffd2495c7d9246b038ee33f2038d17a2080',
-    BancorNetwork: '0xac6e1bed550a16faeca8ed2b3fffe852942f9ac1',
-    BancorConverter: '0xccdbe8b0676a363e1b599a8cd92397dac2e4c5a7',
-    BancorExchange: '0xcff38186b30df6922423071ed3878c61c3d07bf5'
-}
 
-var AuctionConf = {
+
+var conf = {
+    //addresses
+    registry_address: '0xf21930682df28044d88623e0707facf419477041',
+    ring_address: '0xf8720eb6ad4a530cccb696043a0d10831e2ff60e',
+    landBaseProxy_address: '0x342a453e3fcbc68e3d0c7d03f44a4179a6c5071a',
+    objectOwnershipProxy_address: '0x0ce6fe3b598ece2b9cb026943ad3e2df41450481',
+    bancorExchange_address: '0x146ce62cfb2cc353a09b20efeac35de1261db495',
+    kton_address: '0x8db914ef206c7f6c36e5223fce17900b587f46d2',
+    bankProxy_address: '0x33dcd37b0b7315105859f9aa4b603339ad8825fc',
+
     // 4%
     uint_auction_cut: 400,
+    // 20%
+    uint_referer_cut: 2000,
     // 30 minutes
-    uint_auction_bid_waiting_time: 1800,
-    from: '0x4cc4c344eba849dc09ac9af4bff1977e44fc1d7e'
+    uint_bid_waiting_time: 1800,
+    from: '0x4cc4c344eba849dc09ac9af4bff1977e44fc1d7e',
+    uint_error_space: 0
 }
 
-module.exports = function (deployer) {
-    if (deployer.network_id != 1234) {
+let clockAuctionProxy_address;
+let mysteriousTreasureProxy_address;
+let genesisHolderProxy_address;
+let revenuePoolProxy_address;
+let tradingRewardPoolProxy_address;
 
-        deployer.deploy(SettingsRegistry);
+
+module.exports = function (deployer, network) {
+    if (network == 'kovan') {
+
+        deployer.deploy(TradingRewardPoolAuthority);
+        deployer.deploy(SmartTokenAuthority);
         deployer.deploy(AuctionSettingIds);
-        deployer.deploy(ObjectOwnership);
+        deployer.deploy(LandBaseAuthority);
         deployer.deploy(ClaimBountyCalculator);
-        deployer.deploy(LandBase).then(async () => {
-            let ring = await RING.at(BancorAddress.RING);
-            let registry = await SettingsRegistry.deployed();
+        deployer.deploy(Proxy)
+        .then(async () => {
+            let clockAuctionProxy = await Proxy.deployed();
+            clockAuctionProxy_address = clockAuctionProxy.address;
+            console.log("ClockAuctionProxy_address: ", clockAuctionProxy_address);
+            await deployer.deploy(ClockAuction);
+            return deployer.deploy(Proxy);
+        }).then(async () => {
+            let mysteriousTreasureProxy = await Proxy.deployed();
+            mysteriousTreasureProxy_address = mysteriousTreasureProxy.address;
+            console.log("mysteriousTreasureProxy_address: ", mysteriousTreasureProxy_address);
+            await deployer.deploy(MysteriousTreasure);
+            return deployer.deploy(Proxy)
+        }).then(async () => {
+            let genesisHolderProxy  = await Proxy.deployed();
+            genesisHolderProxy_address = genesisHolderProxy.address;
+            console.log("genesisHolderProxy_address: ", genesisHolderProxy_address);
+            await deployer.deploy(GenesisHolder);
+            return deployer.deploy(Proxy)
+        }).then(async () => {
+            let revenuePoolProxy = await Proxy.deployed();
+            revenuePoolProxy_address = revenuePoolProxy.address;
+            console.log("revenuePoolProxy_address: ", revenuePoolProxy_address);
+            await deployer.deploy(RevenuePool);
+            return deployer.deploy(Proxy)
+        }).then(async() => {
+            let tradingRewardPoolProxy = await Proxy.deployed();
+            tradingRewardPoolProxy_address = tradingRewardPoolProxy.address;
+            console.log("tradingRewardPoolProxy_address: ", tradingRewardPoolProxy_address);
+            await deployer.deploy(TradingRewardPool);
+        }).then(async () => {
 
-            await deployer.deploy(MysteriousTreasure, registry.address, [10439, 419, 5258, 12200, 12200]);
-            await deployer.deploy(GenesisHolder, registry.address, ring.address);
+            // let ring = await RING.at(conf.ring_address);
+            let registry = await SettingsRegistry.at(conf.registry_address);
+            let settingIds = await AuctionSettingIds.deployed();
 
-            let auth_string = await registry.ROLE_AUTH_CONTROLLER.call();
-            await registry.adminAddRole(AuctionConf.from, auth_string);
+            //register to registry
+            let tradingRewardPoolId = await settingIds.CONTRACT_TRADING_REWARD_POOL.call();
+            await registry.setAddressProperty(tradingRewardPoolId,tradingRewardPoolProxy_address);
 
-            let auctionSettingsId = await AuctionSettingIds.deployed();
+            let ringId = await settingIds.CONTRACT_RING_ERC20_TOKEN.call();
+            await registry.setAddressProperty(ringId, conf.ring_address);
 
-            // registry address in SettingsRegistry
-            await registry.setAddressProperty(await auctionSettingsId.CONTRACT_RING_ERC20_TOKEN.call(), ring.address);
-            await registry.setAddressProperty(await auctionSettingsId.CONTRACT_AUCTION_CLAIM_BOUNTY.call(), ClaimBountyCalculator.address);
-            await registry.setAddressProperty(await auctionSettingsId.CONTRACT_MYSTERIOUS_TREASURE.call(), MysteriousTreasure.address);
-            await registry.setAddressProperty(await auctionSettingsId.CONTRACT_BANCOR_EXCHANGE.call(), BancorAddress.BancorExchange);
-            await registry.setAddressProperty(await auctionSettingsId.CONTRACT_OBJECT_OWNERSHIP.call(), ObjectOwnership.address);
-            await registry.setAddressProperty(await auctionSettingsId.CONTRACT_LAND_BASE.call(), LandBase.address);
-            // register uint
-            await registry.setUintProperty(await auctionSettingsId.UINT_AUCTION_CUT.call(), AuctionConf.uint_auction_cut);
-            await registry.setUintProperty(await auctionSettingsId.UINT_AUCTION_BID_WAITING_TIME.call(), AuctionConf.uint_auction_bid_waiting_time);
+            let auctionId = await settingIds.CONTRACT_CLOCK_AUCTION.call();
+            await registry.setAddressProperty(auctionId, clockAuctionProxy_address);
 
-            let mysteriousTreasure = await MysteriousTreasure.deployed();
-            let landGenesisData = await LandGenesisData.deployed();
-            await landGenesisData.adminAddRole(mysteriousTreasure.address, await landGenesisData.ROLE_ADMIN.call());
+            let auctionCutId = await settingIds.UINT_AUCTION_CUT.call();
+            await registry.setUintProperty(auctionCutId, conf.uint_auction_cut);
 
-            await deployer.deploy(ClockAuction, Atlantis.address, GenesisHolder.address, registry.address);
+            let claimBounty = await ClaimBountyCalculator.deployed();
+            let claimBountyId = await settingIds.CONTRACT_AUCTION_CLAIM_BOUNTY.call();
+            await registry.setAddressProperty(claimBountyId, claimBounty.address);
 
-            await mysteriousTreasure.transferOwnership(ClockAuction.address);
-            await registry.setAddressProperty(await auctionSettingsId.CONTRACT_CLOCK_AUCTION.call(), ClockAuction.address);
+            let waitingTimeId = await settingIds.UINT_AUCTION_BID_WAITING_TIME.call();
+            await registry.setUintProperty(waitingTimeId, conf.uint_bid_waiting_time);
 
-            console.log('SUCESS! ');
+            let treasureId = await settingIds.CONTRACT_MYSTERIOUS_TREASURE.call();
+            await registry.setAddressProperty(treasureId, mysteriousTreasureProxy_address);
+
+            let bancorExchangeId = await settingIds.CONTRACT_BANCOR_EXCHANGE.call();
+            await registry.setAddressProperty(bancorExchangeId, conf.bancorExchange_address);
+
+            let refererCutId = await settingIds.UINT_REFERER_CUT.call();
+            await registry.setUintProperty(refererCutId, conf.uint_referer_cut);
+
+            let poolId = await settingIds.CONTRACT_REVENUE_POOL.call();
+            await registry.setAddressProperty(poolId, revenuePoolProxy_address);
+
+            let errorSpaceId = await settingIds.UINT_EXCHANGE_ERROR_SPACE.call();
+            await registry.setUintProperty(errorSpaceId, conf.uint_error_space);
+
+            console.log("REGISTRATION DONE! ");
+
+            // upgrade
+            await Proxy.at(clockAuctionProxy_address).upgradeTo(ClockAuction.address);
+            await Proxy.at(mysteriousTreasureProxy_address).upgradeTo(MysteriousTreasure.address);
+            await Proxy.at(genesisHolderProxy_address).upgradeTo(GenesisHolder.address);
+            await Proxy.at(revenuePoolProxy_address).upgradeTo(RevenuePool.address);
+            await Proxy.at(tradingRewardPoolProxy_address).upgradeTo(TradingRewardPool.address);
+            console.log("UPGRADE DONE! ");
+
+            // initialize
+            let clockAuctionProxy = await ClockAuction.at(clockAuctionProxy_address);
+            await clockAuctionProxy.initializeContract(conf.objectOwnershipProxy_address, genesisHolderProxy_address, conf.registry_address);
+
+            let genesisHolderProxy = await GenesisHolder.at(genesisHolderProxy_address);
+            await genesisHolderProxy.initializeContract(conf.registry_address, conf.ring_address);
+
+            let mysteriousTreasureProxy = await MysteriousTreasure.at(mysteriousTreasureProxy_address);
+            await mysteriousTreasureProxy.initializeContract(conf.registry_address, [10439, 419, 5258, 12200, 12200]);
+
+            let revenuePoolProxy = await RevenuePool.at(revenuePoolProxy_address);
+            await revenuePoolProxy.initializeContract(conf.registry_address);
+
+            let tradingRewardPoolProxy = await TradingRewardPool.at(tradingRewardPoolProxy_address);
+            await tradingRewardPoolProxy.initializeContract(conf.registry_address);
+            console.log("INITIALIZATION DONE! ");
+
+            // allow treasure to modify data in landbase
+            let landBaseAuthority = await LandBaseAuthority.deployed();
+            await landBaseAuthority.setWhitelist(mysteriousTreasureProxy_address, true);
+            await LandBase.at(conf.landBaseProxy_address).setAuthority(landBaseAuthority.address);
+
+            // allow revenuePool to modify data in tradingRewardPool
+            let tradingRewardPoolAuthority = await TradingRewardPoolAuthority.deployed();
+            await tradingRewardPoolAuthority.setWhitelist(revenuePoolProxy.address, true);
+            await tradingRewardPoolProxy.setAuthority(tradingRewardPoolAuthority.address);
+
+            // transfer treasure's owner to clockAuction
+            await mysteriousTreasureProxy.transferOwnership(clockAuctionProxy_address);
+
+            // register in genesisHolder
+            await genesisHolderProxy.registerToken(conf.kton_address);
+
+            // set kton's authority to genesisHolder
+            let ktonAuthority = await SmartTokenAuthority.deployed();
+            await ktonAuthority.setWhitelist(conf.bankProxy_address, true);
+            await ktonAuthority.setWhitelist(genesisHolderProxy_address, true);
+            await StandardERC223.at(conf.kton_address).setAuthority(ktonAuthority.address);
+
+            console.log("MIGRATE SUCCESSFULLY! ")
+
         })
+
 
     }
 }
