@@ -132,9 +132,6 @@ contract ClockAuction is Pausable, AuctionSettingIds {
     canBeStoredWith64Bits(_startAt) {
         require(msg.sender == pangu, "only pangu can call this");
 
-        // escrow
-        ERC721Basic(registry.addressOf(SettingIds.CONTRACT_OBJECT_OWNERSHIP)).safeTransferFrom(msg.sender, this, _tokenId);
-
         _createAuction(msg.sender, _tokenId, _startingPriceInToken, _endingPriceInToken, _duration, _startAt, msg.sender, _token);
     }
 
@@ -223,8 +220,7 @@ contract ClockAuction is Pausable, AuctionSettingIds {
         // so dont worry
         IBancorExchange bancorExchange = IBancorExchange(registry.addressOf(AuctionSettingIds.CONTRACT_BANCOR_EXCHANGE));
         uint errorSpace = registry.uintOf(AuctionSettingIds.UINT_EXCHANGE_ERROR_SPACE);
-        uint256 ringFromETH;
-        (ringFromETH, ) = bancorExchange.buyRINGInMinRequiedETH.value(msg.value)(priceInRING, msg.sender, errorSpace);
+        (uint256 ringFromETH, ) = bancorExchange.buyRINGInMinRequiedETH.value(msg.value)(priceInRING, msg.sender, errorSpace);
 
         // double check
         uint refund = ringFromETH.sub(priceInRING);
@@ -318,7 +314,7 @@ contract ClockAuction is Pausable, AuctionSettingIds {
         emit AuctionSuccessful(_tokenId, lastRecord, lastBidder);
     }
 
-    function firstPartBid(uint _auctionCut, uint _refererCut, address _pool, address _buyer, Auction storage _auction, uint _priceInToken, address _referer) internal returns (uint, uint){
+    function _firstPartBid(uint _auctionCut, uint _refererCut, address _pool, address _buyer, Auction storage _auction, uint _priceInToken, address _referer) internal returns (uint, uint){
         require(now >= uint256(_auction.startedAt));
         //  Calculate the auctioneer's cut.
         // (NOTE: computeCut() is guaranteed to return a
@@ -347,7 +343,7 @@ contract ClockAuction is Pausable, AuctionSettingIds {
     }
 
 
-    function secondPartBid(uint _auctionCut, uint _refererCut, address _pool, address _buyer, Auction storage _auction, uint _priceInToken, address _referer) internal returns (uint, uint){
+    function _secondPartBid(uint _auctionCut, uint _refererCut, address _pool, address _buyer, Auction storage _auction, uint _priceInToken, address _referer) internal returns (uint, uint){
         // TODO: repair bug of first bid's time limitation
         // if this the first bid, there is no time limitation
         require(now <= _auction.lastBidStartAt + registry.uintOf(AuctionSettingIds.UINT_AUCTION_BID_WAITING_TIME), "It's too late.");
@@ -395,14 +391,14 @@ contract ClockAuction is Pausable, AuctionSettingIds {
         // the first bid
         if (_auction.lastBidder == 0x0 && _priceInToken > 0) {
 
-            return firstPartBid(auctionCut, refererCut, revenuePool, _buyer, _auction, _priceInToken, _referer);
+            return _firstPartBid(auctionCut, refererCut, revenuePool, _buyer, _auction, _priceInToken, _referer);
         }
 
         // TODO: the math calculation needs further check
         //  not the first bid
         if (_auction.lastRecord > 0 && _auction.lastBidder != 0x0) {
 
-            return secondPartBid(auctionCut, refererCut, revenuePool, _buyer, _auction, _priceInToken, _referer);
+            return _secondPartBid(auctionCut, refererCut, revenuePool, _buyer, _auction, _priceInToken, _referer);
         }
 
     }
@@ -570,6 +566,9 @@ contract ClockAuction is Pausable, AuctionSettingIds {
         // at least one minute. (Keeps our math from getting hairy!)
         require(_duration >= 1 minutes, "duration must be at least 1 minutes");
         require(_duration <= 1000 days);
+
+        // escrow
+        ERC721Basic(registry.addressOf(SettingIds.CONTRACT_OBJECT_OWNERSHIP)).safeTransferFrom(_from, this, _tokenId);
 
         tokenIdToAuction[_tokenId] = Auction({
             seller: _seller,
