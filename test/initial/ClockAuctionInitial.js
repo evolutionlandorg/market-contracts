@@ -4,7 +4,6 @@ var initBancor = BancorInitialization.initBancor;
 
 const StandardERC223 = artifacts.require('StandardERC223');
 const SettingsRegistry = artifacts.require('SettingsRegistry');
-const ClaimBountyCalculator = artifacts.require('ClaimBountyCalculator');
 const AuctionSettingIds = artifacts.require('AuctionSettingIds');
 const MysteriousTreasure = artifacts.require('MysteriousTreasure');
 const GenesisHolder = artifacts.require('GenesisHolder')
@@ -50,9 +49,6 @@ async function initClockAuction(accounts) {
     console.log('genesisHolder address: ', genesisHolder.address);
     await genesisHolder.setOperator(accounts[1]);
 
-    let claimBountyCalculator = await ClaimBountyCalculator.new();
-    console.log('claimBountyCalculator address: ', claimBountyCalculator.address);
-
     let landBase = await LandBase.new();
     console.log('landBase address: ', landBase.address);
 
@@ -60,7 +56,6 @@ async function initClockAuction(accounts) {
     let ringId = await auctionSettingsId.CONTRACT_RING_ERC20_TOKEN.call();
     await registry.setAddressProperty(ringId, ring.address);
 
-    await registry.setAddressProperty(await auctionSettingsId.CONTRACT_AUCTION_CLAIM_BOUNTY.call(), claimBountyCalculator.address);
     await registry.setAddressProperty(await auctionSettingsId.CONTRACT_MYSTERIOUS_TREASURE.call(), mysteriousTreasure.address);
     await registry.setAddressProperty(await auctionSettingsId.CONTRACT_BANCOR_EXCHANGE.call(), bancorExchange.address);
     await registry.setAddressProperty(await auctionSettingsId.CONTRACT_OBJECT_OWNERSHIP.call(), objectOwnership.address);

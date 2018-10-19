@@ -1,5 +1,4 @@
 const SettingsRegistry = artifacts.require('SettingsRegistry');
-const ClaimBountyCalculator = artifacts.require('ClaimBountyCalculator');
 const AuctionSettingIds = artifacts.require('AuctionSettingIds');
 const MysteriousTreasure = artifacts.require('MysteriousTreasure');
 const GenesisHolder = artifacts.require('GenesisHolder')
@@ -63,7 +62,6 @@ module.exports = function (deployer, network) {
         deployer.deploy(SmartTokenAuthority);
         deployer.deploy(AuctionSettingIds);
         deployer.deploy(LandBaseAuthority);
-        deployer.deploy(ClaimBountyCalculator);
         deployer.deploy(Proxy)
         .then(async () => {
             let clockAuctionProxy = await Proxy.deployed();
@@ -112,10 +110,6 @@ module.exports = function (deployer, network) {
 
             let auctionCutId = await settingIds.UINT_AUCTION_CUT.call();
             await registry.setUintProperty(auctionCutId, conf.uint_auction_cut);
-
-            let claimBounty = await ClaimBountyCalculator.deployed();
-            let claimBountyId = await settingIds.CONTRACT_AUCTION_CLAIM_BOUNTY.call();
-            await registry.setAddressProperty(claimBountyId, claimBounty.address);
 
             let waitingTimeId = await settingIds.UINT_AUCTION_BID_WAITING_TIME.call();
             await registry.setUintProperty(waitingTimeId, conf.uint_bid_waiting_time);

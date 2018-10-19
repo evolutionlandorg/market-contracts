@@ -6,7 +6,6 @@ import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "@evolutionland/common/contracts/interfaces/ISettingsRegistry.sol";
 import "@evolutionland/land/contracts/interfaces/ILandBase.sol";
-import "./interfaces/IClaimBountyCalculator.sol";
 import "./AuctionSettingIds.sol";
 import "./interfaces/IBancorExchange.sol";
 
@@ -70,9 +69,6 @@ contract ClockAuctionBase is Pausable, AuctionSettingIds {
 
     // new bid event
     event NewBid(uint256 indexed tokenId, address lastBidder, address lastReferer, uint256 lastRecord, address tokenAddress, uint256 bidStartAt, uint256 returnToLastBidder);
-
-    // set claimBounty
-    event ClaimBounty(address indexed _token, uint256 indexed _claimBounty);
 
     /// @dev DON'T give me your money.
     function() external {}
@@ -188,11 +184,6 @@ contract ClockAuctionBase is Pausable, AuctionSettingIds {
     {
         uint256 secondsPassed = 0;
 
-        // get bounty of certain token
-        IClaimBountyCalculator claimBountyCalculator = IClaimBountyCalculator(registry.addressOf(AuctionSettingIds.CONTRACT_AUCTION_CLAIM_BOUNTY));
-        
-        uint256 claimBounty = claimBountyCalculator.tokenAmountForBounty(_auction.token);
-
         // A bit of insurance against negative values (or wraparound).
         // Probably not necessary (since Ethereum guarnatees that the
         // now variable doesn't ever go backwards).
@@ -205,15 +196,14 @@ contract ClockAuctionBase is Pausable, AuctionSettingIds {
                 _auction.startingPriceInToken,
                 _auction.endingPriceInToken,
                 _auction.duration,
-                secondsPassed,
-                claimBounty
+                secondsPassed
             );
         } else {
             // compatible with first bid
             // as long as price_offered_by_buyer >= 1.1 * currentPice,
             // this buyer will be the lastBidder
-            // 1.1 * (lastRecord - claimBounty) + claimBounty
-            return ((11 * (uint256(_auction.lastRecord).sub(claimBounty)) / 10).add(claimBounty));
+            // 1.1 * (lastRecord)
+            return (11 * (uint256(_auction.lastRecord)) / 10);
         }
 
     }
@@ -227,8 +217,7 @@ contract ClockAuctionBase is Pausable, AuctionSettingIds {
         uint256 _startingPriceInToken,
         uint256 _endingPriceInToken,
         uint256 _duration,
-        uint256 _secondsPassed,
-        uint256 _claimBounty
+        uint256 _secondsPassed
     )
     internal
     pure
@@ -257,7 +246,7 @@ contract ClockAuctionBase is Pausable, AuctionSettingIds {
             // less that _startingPrice. Thus, this result will always end up positive.
             int256 currentPriceInToken = int256(_startingPriceInToken) + currentPriceInTokenChange;
 
-            return (uint256(currentPriceInToken) + _claimBounty);
+            return uint256(currentPriceInToken);
         }
     }
 

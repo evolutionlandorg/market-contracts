@@ -181,11 +181,9 @@ contract ClockAuction is ClockAuctionBase {
             RING.transfer(msg.sender, refund);
         }
 
-        IClaimBountyCalculator claimBountyCalculator = IClaimBountyCalculator(registry.addressOf(AuctionSettingIds.CONTRACT_AUCTION_CLAIM_BOUNTY));
-        uint claimBounty = claimBountyCalculator.tokenAmountForBounty(auction.token);
         uint bidMoment;
         uint returnToLastBidder;
-        (bidMoment, returnToLastBidder) = _bidProcess(msg.sender, auction, priceInRING, _referer, claimBounty);
+        (bidMoment, returnToLastBidder) = _bidProcess(msg.sender, auction, priceInRING, _referer);
 
         // Tell the world!
         // 0x0 refers to ETH
@@ -210,12 +208,9 @@ contract ClockAuction is ClockAuctionBase {
             ERC20(auction.token).transfer(_from, refund);
         }
 
-        IClaimBountyCalculator claimBountyCalculator = IClaimBountyCalculator(registry.addressOf(AuctionSettingIds.CONTRACT_AUCTION_CLAIM_BOUNTY));
-        uint claimBounty = claimBountyCalculator.tokenAmountForBounty(auction.token);
-
         uint bidMoment;
         uint returnToLastBidder;
-        (bidMoment, returnToLastBidder) = _bidProcess(_from, auction, priceInToken, _referer, claimBounty);
+        (bidMoment, returnToLastBidder) = _bidProcess(_from, auction, priceInToken, _referer);
 
         // Tell the world!
         emit NewBid(_tokenId, _from, _referer, priceInToken, auction.token, bidMoment, returnToLastBidder);
@@ -266,35 +261,24 @@ contract ClockAuction is ClockAuctionBase {
         address lastBidder = auction.lastBidder;
         uint lastRecord = auction.lastRecord;
 
-        IClaimBountyCalculator claimBountyCalculator = IClaimBountyCalculator(registry.addressOf(AuctionSettingIds.CONTRACT_AUCTION_CLAIM_BOUNTY));
-
-        uint claimBounty = claimBountyCalculator.tokenAmountForBounty(auction.token);
-
         //prevent re-entry attack
         _removeAuction(_tokenId);
 
         nonFungibleContract.safeTransferFrom(this, lastBidder, _tokenId);
 
-        // if there is claimBounty, then reward who invoke this function
-        if (claimBounty > 0) {
-            require(token.transfer(msg.sender, claimBounty));
-        }
-
         emit AuctionSuccessful(_tokenId, lastRecord, lastBidder);
     }
 
-    function firstPartBid(uint _auctionCut, uint _refererCut, address _pool, address _buyer, Auction storage _auction, uint _priceInToken, address _referer, uint _claimBounty) internal returns (uint, uint){
+    function firstPartBid(uint _auctionCut, uint _refererCut, address _pool, address _buyer, Auction storage _auction, uint _priceInToken, address _referer) internal returns (uint, uint){
         require(now >= uint256(_auction.startedAt));
         //  Calculate the auctioneer's cut.
         // (NOTE: computeCut() is guaranteed to return a
         //  value <= price, so this subtraction can't go negative.)
         // TODO: token to the seller
-        // we dont touch claimBounty
-        uint priceWithoutBounty = _priceInToken.sub(_claimBounty);
-        uint256 ownerCutAmount = computeCut(priceWithoutBounty, _auctionCut);
+        uint256 ownerCutAmount = computeCut(_priceInToken, _auctionCut);
 
         // transfer to the seller
-        ERC223(_auction.token).transfer(_auction.seller, (priceWithoutBounty - ownerCutAmount), toBytes(_buyer));
+        ERC223(_auction.token).transfer(_auction.seller, (_priceInToken - ownerCutAmount), toBytes(_buyer));
 
         if (_referer != 0x0) {
             uint refererBounty = computeCut(ownerCutAmount, _refererCut);
@@ -323,7 +307,6 @@ contract ClockAuction is ClockAuctionBase {
         // was assured in _currentPriceInRING(_auction)
         // here double check
         // 1.1*price + bounty - (price + bounty) = 0.1 * price
-        // we dont touch claimBounty
         uint surplus = _priceInToken.sub(uint256(_auction.lastRecord));
         uint poolCutAmount = computeCut(surplus, _auctionCut);
         uint extractFromGap = surplus - poolCutAmount;
@@ -349,7 +332,7 @@ contract ClockAuction is ClockAuctionBase {
     }
 
     // TODO: add _token to compatible backwards with ring and eth
-    function _bidProcess(address _buyer, Auction storage _auction, uint _priceInToken, address _referer, uint _claimBounty)
+    function _bidProcess(address _buyer, Auction storage _auction, uint _priceInToken, address _referer)
     internal
     canBeStoredWith128Bits(_priceInToken)
     returns (uint256, uint256){
@@ -363,7 +346,7 @@ contract ClockAuction is ClockAuctionBase {
         // the first bid
         if (_auction.lastBidder == 0x0 && _priceInToken > 0) {
 
-            return firstPartBid(auctionCut, refererCut, revenuePool, _buyer, _auction, _priceInToken, _referer, _claimBounty);
+            return firstPartBid(auctionCut, refererCut, revenuePool, _buyer, _auction, _priceInToken, _referer);
         }
 
         // TODO: the math calculation needs further check

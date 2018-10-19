@@ -12,7 +12,6 @@ var initClockAuction = ClockAuctionInital.initClockAuction;
 
 const StandardERC223 = artifacts.require('StandardERC223');
 const SettingsRegistry = artifacts.require('SettingsRegistry');
-const ClaimBountyCalculator = artifacts.require('ClaimBountyCalculator');
 const AuctionSettingIds = artifacts.require('AuctionSettingIds');
 const MysteriousTreasure = artifacts.require('MysteriousTreasure');
 const GenesisHolder = artifacts.require('GenesisHolder')
