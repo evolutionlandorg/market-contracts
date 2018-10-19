@@ -78,7 +78,7 @@ data的例子如下（分行仅为显示清晰）：
 ### KOVAN测试网络地址
 ```js
 TradingRewardPoolAuthority: 0x45ce89ca7dd52a3a014d1b5b1f701b7f6f47b6c7
-KTONAuthority: 0x949f6bea904a1c1b636a905f0d184f10f0ce1b20
+KTONAuthority: 0x53e9238d3e5c083ede29f074bd26467af17b5389
 AuctionSettingIds: 0xb39a4e98ce16d5c9b2c77b205cb1401555ea424f
 LandBaseAuthority: 0xbd794a98cc24aa6e3ccb82afa056444d31e65113
 ClaimBountyCalculator: 0x9a6f0952392461dbc36fc3e1215f5f31958ffed1
@@ -97,4 +97,5 @@ RvenuePoolProxy:  0x96b53ff8ded636d4a58a8a2f65eeda9ea392f4ff
 
 TradingRewardPool: 0xc0a768a71b1722b5bcc908157795e7f820fa5841
 TradingRewardPoolProxy_address:  0x611cb5e939c2815b690930fb3fec1a606ddcd7a5
+
 ```
