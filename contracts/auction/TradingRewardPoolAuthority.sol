@@ -1,13 +1,14 @@
 pragma solidity ^0.4.24;
 
 import "@evolutionland/common/contracts/interfaces/IAuthority.sol";
-import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
-contract TradingRewardPoolAuthority is Ownable, IAuthority {
+contract TradingRewardPoolAuthority is IAuthority {
     mapping (address => bool) public whiteList;
 
-    function setWhitelist(address _address, bool _flag) public onlyOwner {
-        whiteList[_address] = _flag;
+    constructor(address[] _whitelists) public {
+        for (uint i = 0; i < _whitelists.length; i ++) {
+            whiteList[_whitelists[i]] = true;
+        }
     }
 
     function canCall(

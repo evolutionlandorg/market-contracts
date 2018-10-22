@@ -1,6 +1,5 @@
 pragma solidity ^0.4.23;
 
-import "./interfaces/IMysteriousTreasure.sol";
 import "openzeppelin-solidity/contracts/lifecycle/Pausable.sol";
 import "openzeppelin-solidity/contracts/token/ERC721/ERC721Basic.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
@@ -9,12 +8,16 @@ import "@evolutionland/common/contracts/interfaces/ISettingsRegistry.sol";
 import "@evolutionland/common/contracts/interfaces/ERC223.sol";
 import "@evolutionland/common/contracts/PausableDSAuth.sol";
 import "@evolutionland/land/contracts/interfaces/ILandBase.sol";
+import "@evolutionland/land/contracts/interfaces/IMysteriousTreasure.sol";
 import "./AuctionSettingIds.sol";
 import "./interfaces/IBancorExchange.sol";
 
 contract ClockAuction is PausableDSAuth, AuctionSettingIds {
     using SafeMath for *;
-    event AuctionCreated(uint256 tokenId, address seller, uint256 startingPriceInToken, uint256 endingPriceInToken, uint256 duration, address token);
+    event AuctionCreated(
+        uint256 tokenId, address seller, uint256 startingPriceInToken, uint256 endingPriceInToken, uint256 duration, address token
+    );
+
     event AuctionSuccessful(uint256 tokenId, uint256 totalPrice, address winner);
     event AuctionCancelled(uint256 tokenId);
 
@@ -22,7 +25,9 @@ contract ClockAuction is PausableDSAuth, AuctionSettingIds {
     event ClaimedTokens(address indexed token, address indexed owner, uint amount);
 
     // new bid event
-    event NewBid(uint256 indexed tokenId, address lastBidder, address lastReferer, uint256 lastRecord, address tokenAddress, uint256 bidStartAt, uint256 returnToLastBidder);
+    event NewBid(
+        uint256 indexed tokenId, address lastBidder, address lastReferer, uint256 lastRecord, address tokenAddress, uint256 bidStartAt, uint256 returnToLastBidder
+    );
 
     // new bid event with eth
     event NewBidWithETH(uint256 indexed tokenId, address lastBidder, address lastReferer, uint256 ethRequired, uint256 lastRecord, address tokenAddress, uint256 bidStartAt, uint256 returnToLastBidder);
@@ -31,25 +36,25 @@ contract ClockAuction is PausableDSAuth, AuctionSettingIds {
     struct Auction {
         // Current owner of NFT
         address seller;
+        // Time when auction started
+        // NOTE: 0 if this auction has been concluded
+        uint48 startedAt;
+        // Duration (in seconds) of auction
+        uint48 duration;
         // Price (in token) at beginning of auction
         uint128 startingPriceInToken;
         // Price (in token) at end of auction
         uint128 endingPriceInToken;
-        // Duration (in seconds) of auction
-        uint64 duration;
-        // Time when auction started
-        // NOTE: 0 if this auction has been concluded
-        uint64 startedAt;
-
+        // bid the auction through which token
+        address token;
+        
         // it saves gas in this order
         // highest offered price (in RING)
         uint128 lastRecord;
-        // bid the auction through which token
-        address token;
         // bidder who offer the highest price
         address lastBidder;
         // latestBidder's bidTime in timestamp
-        uint256 lastBidStartAt;
+        uint48 lastBidStartAt;
         // lastBidder's referer
         address lastReferer;
     }
@@ -77,8 +82,8 @@ contract ClockAuction is PausableDSAuth, AuctionSettingIds {
 
         // Modifiers to check that inputs can be safely stored with a certain
     // number of bits. We use constants and multiple modifiers to save gas.
-    modifier canBeStoredWith64Bits(uint256 _value) {
-        require(_value <= 18446744073709551615);
+    modifier canBeStoredWith48Bits(uint256 _value) {
+        require(_value <= 281474976710656);
         _;
     }
 
@@ -125,8 +130,7 @@ contract ClockAuction is PausableDSAuth, AuctionSettingIds {
         uint256 _duration,
         uint256 _startAt,
         address _token) // with any token
-    public auth
-    canBeStoredWith64Bits(_startAt) {
+    public auth {
         _createAuction(msg.sender, _tokenId, _startingPriceInToken, _endingPriceInToken, _duration, _startAt, msg.sender, _token);
     }
 
@@ -331,7 +335,7 @@ contract ClockAuction is PausableDSAuth, AuctionSettingIds {
         // modify bid-related member variables
         _auction.lastBidder = _buyer;
         _auction.lastRecord = uint128(_priceInToken);
-        _auction.lastBidStartAt = now;
+        _auction.lastBidStartAt = uint48(now);
         _auction.lastReferer = _referer;
 
         return (_auction.lastBidStartAt, 0);
@@ -365,7 +369,7 @@ contract ClockAuction is PausableDSAuth, AuctionSettingIds {
         // modify bid-related member variables
         _auction.lastBidder = _buyer;
         _auction.lastRecord = uint128(_priceInToken);
-        _auction.lastBidStartAt = now;
+        _auction.lastBidStartAt = uint48(now);
         _auction.lastReferer = _referer;
 
         return (_auction.lastBidStartAt, (realReturnForEach + uint256(_auction.lastRecord)));
@@ -434,10 +438,10 @@ contract ClockAuction is PausableDSAuth, AuctionSettingIds {
     returns
     (
         address seller,
+        uint256 startedAt,
+        uint256 duration,
         uint256 startingPrice,
         uint256 endingPrice,
-        uint256 duration,
-        uint256 startedAt,
         address token,
         uint128 lastRecord,
         address lastBidder,
@@ -545,13 +549,12 @@ contract ClockAuction is PausableDSAuth, AuctionSettingIds {
         address _token
     )
     internal
-    whenNotPaused
     canBeStoredWith128Bits(_startingPriceInToken)
     canBeStoredWith128Bits(_endingPriceInToken)
-    canBeStoredWith64Bits(_duration)
-    canBeStoredWith64Bits(_startAt)
+    canBeStoredWith48Bits(_duration)
+    canBeStoredWith48Bits(_startAt)
+    whenNotPaused
     {
-        require(_startingPriceInToken <= (1000000000 ether) && _endingPriceInToken <= (1000000000 ether));
         // Require that all auctions have a duration of
         // at least one minute. (Keeps our math from getting hairy!)
         require(_duration >= 1 minutes, "duration must be at least 1 minutes");
@@ -562,10 +565,10 @@ contract ClockAuction is PausableDSAuth, AuctionSettingIds {
 
         tokenIdToAuction[_tokenId] = Auction({
             seller: _seller,
+            startedAt: uint48(_startAt),
+            duration: uint48(_duration),
             startingPriceInToken: uint128(_startingPriceInToken),
             endingPriceInToken: uint128(_endingPriceInToken),
-            duration: uint64(_duration),
-            startedAt: uint64(_startAt),
             lastRecord: 0,
             token: _token,
             // which refer to lastRecord, lastBidder, lastBidStartAt,lastReferer
