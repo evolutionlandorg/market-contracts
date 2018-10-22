@@ -29,6 +29,9 @@ contract ClockAuction is PausableDSAuth, AuctionSettingIds {
         uint256 indexed tokenId, address lastBidder, address lastReferer, uint256 lastRecord, address tokenAddress, uint256 bidStartAt, uint256 returnToLastBidder
     );
 
+    // new bid event with eth
+    event NewBidWithETH(uint256 indexed tokenId, address lastBidder, address lastReferer, uint256 ethRequired, uint256 lastRecord, address tokenAddress, uint256 bidStartAt, uint256 returnToLastBidder);
+
     // Represents an auction on an NFT
     struct Auction {
         // Current owner of NFT
@@ -233,7 +236,7 @@ contract ClockAuction is PausableDSAuth, AuctionSettingIds {
         // Tell the world!
         // 0x0 refers to ETH
         // NOTE: priceInRING, not priceInETH
-        emit NewBid(_tokenId, msg.sender, _referer, ethRequired, 0x0, bidMoment, returnToLastBidder);
+        emit NewBidWithETH(_tokenId, msg.sender, _referer, ethRequired, priceInRING, 0x0, bidMoment, returnToLastBidder);
 
         return priceInRING;
     }
