@@ -37,12 +37,11 @@ contract ClockAuction is PausableDSAuth, AuctionSettingIds {
         // Time when auction started
         // NOTE: 0 if this auction has been concluded
         uint64 startedAt;
-        // bid the auction through which token
-        address token;
-
         // it saves gas in this order
         // highest offered price (in RING)
         uint128 lastRecord;
+        // bid the auction through which token
+        address token;
         // bidder who offer the highest price
         address lastBidder;
         // latestBidder's bidTime in timestamp
@@ -563,10 +562,10 @@ contract ClockAuction is PausableDSAuth, AuctionSettingIds {
             endingPriceInToken: uint128(_endingPriceInToken),
             duration: uint64(_duration),
             startedAt: uint64(_startAt),
+            lastRecord: 0,
             token: _token,
             // which refer to lastRecord, lastBidder, lastBidStartAt,lastReferer
             // all set to zero when initialized
-            lastRecord: 0,
             lastBidder: address(0),
             lastBidStartAt: 0,
             lastReferer: address(0)
