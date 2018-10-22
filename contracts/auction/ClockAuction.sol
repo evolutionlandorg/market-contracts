@@ -14,7 +14,10 @@ import "./interfaces/IBancorExchange.sol";
 
 contract ClockAuction is PausableDSAuth, AuctionSettingIds {
     using SafeMath for *;
-    event AuctionCreated(uint256 tokenId, address seller, uint256 startingPriceInToken, uint256 endingPriceInToken, uint256 duration, address token);
+    event AuctionCreated(
+        uint256 tokenId, address seller, uint256 startingPriceInToken, uint256 endingPriceInToken, uint256 duration, address token
+    );
+
     event AuctionSuccessful(uint256 tokenId, uint256 totalPrice, address winner);
     event AuctionCancelled(uint256 tokenId);
 
@@ -22,21 +25,23 @@ contract ClockAuction is PausableDSAuth, AuctionSettingIds {
     event ClaimedTokens(address indexed token, address indexed owner, uint amount);
 
     // new bid event
-    event NewBid(uint256 indexed tokenId, address lastBidder, address lastReferer, uint256 lastRecord, address tokenAddress, uint256 bidStartAt, uint256 returnToLastBidder);
+    event NewBid(
+        uint256 indexed tokenId, address lastBidder, address lastReferer, uint256 lastRecord, address tokenAddress, uint256 bidStartAt, uint256 returnToLastBidder
+    );
 
     // Represents an auction on an NFT
     struct Auction {
         // Current owner of NFT
         address seller;
+        // Time when auction started
+        // NOTE: 0 if this auction has been concluded
+        uint48 startedAt;
+        // Duration (in seconds) of auction
+        uint48 duration;
         // Price (in token) at beginning of auction
         uint128 startingPriceInToken;
         // Price (in token) at end of auction
         uint128 endingPriceInToken;
-        // Duration (in seconds) of auction
-        uint64 duration;
-        // Time when auction started
-        // NOTE: 0 if this auction has been concluded
-        uint64 startedAt;
         // bid the auction through which token
         address token;
 
@@ -46,7 +51,7 @@ contract ClockAuction is PausableDSAuth, AuctionSettingIds {
         // bidder who offer the highest price
         address lastBidder;
         // latestBidder's bidTime in timestamp
-        uint256 lastBidStartAt;
+        uint48 lastBidStartAt;
         // lastBidder's referer
         address lastReferer;
     }
@@ -117,13 +122,12 @@ contract ClockAuction is PausableDSAuth, AuctionSettingIds {
 
     function createAuction(
         uint256 _tokenId,
-        uint256 _startingPriceInToken,
-        uint256 _endingPriceInToken,
-        uint256 _duration,
-        uint256 _startAt,
+        uint128 _startingPriceInToken,
+        uint128 _endingPriceInToken,
+        uint48 _duration,
+        uint48 _startAt,
         address _token) // with any token
-    public auth
-    canBeStoredWith64Bits(_startAt) {
+    public auth {
         _createAuction(msg.sender, _tokenId, _startingPriceInToken, _endingPriceInToken, _duration, _startAt, msg.sender, _token);
     }
 
@@ -534,21 +538,16 @@ contract ClockAuction is PausableDSAuth, AuctionSettingIds {
     function _createAuction(
         address _from,
         uint256 _tokenId,
-        uint256 _startingPriceInToken,
-        uint256 _endingPriceInToken,
-        uint256 _duration,
-        uint256 _startAt,
+        uint128 _startingPriceInToken,
+        uint128 _endingPriceInToken,
+        uint48 _duration,
+        uint48 _startAt,
         address _seller,
         address _token
     )
     internal
     whenNotPaused
-    canBeStoredWith128Bits(_startingPriceInToken)
-    canBeStoredWith128Bits(_endingPriceInToken)
-    canBeStoredWith64Bits(_duration)
-    canBeStoredWith64Bits(_startAt)
     {
-        require(_startingPriceInToken <= (1000000000 ether) && _endingPriceInToken <= (1000000000 ether));
         // Require that all auctions have a duration of
         // at least one minute. (Keeps our math from getting hairy!)
         require(_duration >= 1 minutes, "duration must be at least 1 minutes");
@@ -580,10 +579,10 @@ contract ClockAuction is PausableDSAuth, AuctionSettingIds {
     ///  When testing, make this function public and turn on
     ///  `Current price computation` test suite.
     function _computeCurrentPriceInToken(
-        uint256 _startingPriceInToken,
-        uint256 _endingPriceInToken,
-        uint256 _duration,
-        uint256 _secondsPassed
+        uint128 _startingPriceInToken,
+        uint128 _endingPriceInToken,
+        uint48 _duration,
+        uint48 _secondsPassed
     )
     internal
     pure

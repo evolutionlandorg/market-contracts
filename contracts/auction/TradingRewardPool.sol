@@ -82,7 +82,7 @@ contract TradingRewardPool is DSAuth, ITradingRewardPool, AuctionSettingIds {
             rewardAmount = totalTicketAmount;
         }
 
-        rewardAmount = rewardAmount * ERC20(ring).balanceOf(msg.sender) / totalTicketAmount;
+        rewardAmount = rewardAmount * ERC20(ring).balanceOf(address(this)) / totalTicketAmount;
 
         // clear ticket.
         clearTicket(msg.sender);
