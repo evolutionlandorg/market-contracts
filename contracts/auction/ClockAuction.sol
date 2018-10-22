@@ -1,6 +1,5 @@
 pragma solidity ^0.4.23;
 
-import "./interfaces/IMysteriousTreasure.sol";
 import "openzeppelin-solidity/contracts/lifecycle/Pausable.sol";
 import "openzeppelin-solidity/contracts/token/ERC721/ERC721Basic.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
@@ -9,6 +8,7 @@ import "@evolutionland/common/contracts/interfaces/ISettingsRegistry.sol";
 import "@evolutionland/common/contracts/interfaces/ERC223.sol";
 import "@evolutionland/common/contracts/PausableDSAuth.sol";
 import "@evolutionland/land/contracts/interfaces/ILandBase.sol";
+import "@evolutionland/land/contracts/interfaces/IMysteriousTreasure.sol";
 import "./AuctionSettingIds.sol";
 import "./interfaces/IBancorExchange.sol";
 
@@ -44,7 +44,7 @@ contract ClockAuction is PausableDSAuth, AuctionSettingIds {
         uint128 endingPriceInToken;
         // bid the auction through which token
         address token;
-
+        
         // it saves gas in this order
         // highest offered price (in RING)
         uint128 lastRecord;
@@ -79,8 +79,8 @@ contract ClockAuction is PausableDSAuth, AuctionSettingIds {
 
         // Modifiers to check that inputs can be safely stored with a certain
     // number of bits. We use constants and multiple modifiers to save gas.
-    modifier canBeStoredWith64Bits(uint256 _value) {
-        require(_value <= 18446744073709551615);
+    modifier canBeStoredWith48Bits(uint256 _value) {
+        require(_value <= 281474976710656);
         _;
     }
 
@@ -122,10 +122,10 @@ contract ClockAuction is PausableDSAuth, AuctionSettingIds {
 
     function createAuction(
         uint256 _tokenId,
-        uint128 _startingPriceInToken,
-        uint128 _endingPriceInToken,
-        uint48 _duration,
-        uint48 _startAt,
+        uint256 _startingPriceInToken,
+        uint256 _endingPriceInToken,
+        uint256 _duration,
+        uint256 _startAt,
         address _token) // with any token
     public auth {
         _createAuction(msg.sender, _tokenId, _startingPriceInToken, _endingPriceInToken, _duration, _startAt, msg.sender, _token);
@@ -216,7 +216,7 @@ contract ClockAuction is PausableDSAuth, AuctionSettingIds {
         // so dont worry
         IBancorExchange bancorExchange = IBancorExchange(registry.addressOf(AuctionSettingIds.CONTRACT_BANCOR_EXCHANGE));
         uint errorSpace = registry.uintOf(AuctionSettingIds.UINT_EXCHANGE_ERROR_SPACE);
-        (uint256 ringFromETH, ) = bancorExchange.buyRINGInMinRequiedETH.value(msg.value)(priceInRING, msg.sender, errorSpace);
+        (uint256 ringFromETH, uint256 ethRequired) = bancorExchange.buyRINGInMinRequiedETH.value(msg.value)(priceInRING, msg.sender, errorSpace);
 
         // double check
         uint refund = ringFromETH.sub(priceInRING);
@@ -233,7 +233,7 @@ contract ClockAuction is PausableDSAuth, AuctionSettingIds {
         // Tell the world!
         // 0x0 refers to ETH
         // NOTE: priceInRING, not priceInETH
-        emit NewBid(_tokenId, msg.sender, _referer, priceInRING, 0x0, bidMoment, returnToLastBidder);
+        emit NewBid(_tokenId, msg.sender, _referer, ethRequired, 0x0, bidMoment, returnToLastBidder);
 
         return priceInRING;
     }
@@ -332,7 +332,7 @@ contract ClockAuction is PausableDSAuth, AuctionSettingIds {
         // modify bid-related member variables
         _auction.lastBidder = _buyer;
         _auction.lastRecord = uint128(_priceInToken);
-        _auction.lastBidStartAt = now;
+        _auction.lastBidStartAt = uint48(now);
         _auction.lastReferer = _referer;
 
         return (_auction.lastBidStartAt, 0);
@@ -366,7 +366,7 @@ contract ClockAuction is PausableDSAuth, AuctionSettingIds {
         // modify bid-related member variables
         _auction.lastBidder = _buyer;
         _auction.lastRecord = uint128(_priceInToken);
-        _auction.lastBidStartAt = now;
+        _auction.lastBidStartAt = uint48(now);
         _auction.lastReferer = _referer;
 
         return (_auction.lastBidStartAt, (realReturnForEach + uint256(_auction.lastRecord)));
@@ -435,10 +435,10 @@ contract ClockAuction is PausableDSAuth, AuctionSettingIds {
     returns
     (
         address seller,
+        uint256 startedAt,
+        uint256 duration,
         uint256 startingPrice,
         uint256 endingPrice,
-        uint256 duration,
-        uint256 startedAt,
         address token,
         uint128 lastRecord,
         address lastBidder,
@@ -538,14 +538,18 @@ contract ClockAuction is PausableDSAuth, AuctionSettingIds {
     function _createAuction(
         address _from,
         uint256 _tokenId,
-        uint128 _startingPriceInToken,
-        uint128 _endingPriceInToken,
-        uint48 _duration,
-        uint48 _startAt,
+        uint256 _startingPriceInToken,
+        uint256 _endingPriceInToken,
+        uint256 _duration,
+        uint256 _startAt,
         address _seller,
         address _token
     )
     internal
+    canBeStoredWith128Bits(_startingPriceInToken)
+    canBeStoredWith128Bits(_endingPriceInToken)
+    canBeStoredWith48Bits(_duration)
+    canBeStoredWith48Bits(_startAt)
     whenNotPaused
     {
         // Require that all auctions have a duration of
@@ -558,14 +562,14 @@ contract ClockAuction is PausableDSAuth, AuctionSettingIds {
 
         tokenIdToAuction[_tokenId] = Auction({
             seller: _seller,
+            startedAt: uint48(_startAt),
+            duration: uint48(_duration),
             startingPriceInToken: uint128(_startingPriceInToken),
             endingPriceInToken: uint128(_endingPriceInToken),
-            duration: uint64(_duration),
-            startedAt: uint64(_startAt),
+            lastRecord: 0,
             token: _token,
             // which refer to lastRecord, lastBidder, lastBidStartAt,lastReferer
             // all set to zero when initialized
-            lastRecord: 0,
             lastBidder: address(0),
             lastBidStartAt: 0,
             lastReferer: address(0)
@@ -579,10 +583,10 @@ contract ClockAuction is PausableDSAuth, AuctionSettingIds {
     ///  When testing, make this function public and turn on
     ///  `Current price computation` test suite.
     function _computeCurrentPriceInToken(
-        uint128 _startingPriceInToken,
-        uint128 _endingPriceInToken,
-        uint48 _duration,
-        uint48 _secondsPassed
+        uint256 _startingPriceInToken,
+        uint256 _endingPriceInToken,
+        uint256 _duration,
+        uint256 _secondsPassed
     )
     internal
     pure

@@ -42,6 +42,18 @@ contract GenesisHolder is Ownable, AuctionSettingIds {
         registry = _registry;
     }
 
+    function tokenFallback(address _from, uint256 _value, bytes _data) public {
+
+        address ring = registry.addressOf(SettingIds.CONTRACT_RING_ERC20_TOKEN);
+        address kton = registry.addressOf(SettingIds.CONTRACT_KTON_ERC20_TOKEN);
+        address revenuePool = registry.addressOf(AuctionSettingIds.CONTRACT_REVENUE_POOL);
+
+        if(msg.sender == ring || msg.sender == kton) {
+            ERC223(msg.sender).transfer(revenuePool, _value, _data);
+        }
+    }
+
+
     function createAuction(
         uint256 _tokenId,
         uint256 _startingPriceInToken,
