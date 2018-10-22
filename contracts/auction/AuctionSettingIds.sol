@@ -39,6 +39,8 @@ contract AuctionSettingIds is SettingIds {
     // value belongs to [0, 10000000]
     bytes32 public constant UINT_EXCHANGE_ERROR_SPACE = "UINT_EXCHANGE_ERROR_SPACE";
 
+    // "CONTRACT_CONTRIBUTION_INCENTIVE_POOL" is too long for byted32
+    // so compress it to what states below
     bytes32 public constant CONTRACT_CONTRIBUTION_INCENTIVE_POOL = "CONTRACT_CONTRIBUTION_POOL";
 
     bytes32 public constant CONTRACT_DIVIDENDS_POOL = "CONTRACT_DIVIDENDS_POOL";

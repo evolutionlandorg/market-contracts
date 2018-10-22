@@ -72,6 +72,16 @@ contract RevenuePool is DSAuth, ERC223ReceivingContract, AuctionSettingIds {
         require(ERC223(_tokenAddress).transfer(devPool, balance * 3 / 10, "0x0"));
     }
 
+
+    function settleTradingRewardToken(address _tokenAddress) public {
+        uint balance = ERC20(_tokenAddress).balanceOf(address(this));
+        address tradingRewardPool = registry.addressOf(AuctionSettingIds.CONTRACT_TRADING_REWARD_POOL);
+
+        require(tradingRewardPool != 0x0 );
+
+        require(ERC223(_tokenAddress).transfer(tradingRewardPool, balance / 10, "0x0"));
+    }
+
     /// @notice This method can be used by the owner to extract mistakenly
     ///  sent tokens to this contract.
     /// @param _token The address of the token contract that you want to recover
