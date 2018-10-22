@@ -49,7 +49,7 @@ contract TradingRewardPool is DSAuth, ITradingRewardPool, AuctionSettingIds {
         address revenuePool = registry.addressOf(AuctionSettingIds.CONTRACT_REVENUE_POOL);
 
         RevenuePool(revenuePool)
-            .settleTradingRewardToken(registry.addressOf(SettingIds.CONTRACT_RING_ERC20_TOKEN));
+            .settleToken(registry.addressOf(SettingIds.CONTRACT_RING_ERC20_TOKEN));
 
         uint256 ticketAmount = tickets[msg.sender];
 
@@ -82,7 +82,7 @@ contract TradingRewardPool is DSAuth, ITradingRewardPool, AuctionSettingIds {
             rewardAmount = totalTicketAmount;
         }
 
-        rewardAmount = rewardAmount * ERC20(ring).balanceOf(msg.sender) / totalTicketAmount;
+        rewardAmount = rewardAmount * ERC20(ring).balanceOf(address(this)) / totalTicketAmount;
 
         // clear ticket.
         clearTicket(msg.sender);
