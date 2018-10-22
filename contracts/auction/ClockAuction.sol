@@ -37,6 +37,7 @@ contract ClockAuction is PausableDSAuth, AuctionSettingIds {
         // Time when auction started
         // NOTE: 0 if this auction has been concluded
         uint64 startedAt;
+
         // it saves gas in this order
         // highest offered price (in RING)
         uint128 lastRecord;
