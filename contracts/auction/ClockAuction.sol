@@ -212,7 +212,7 @@ contract ClockAuction is PausableDSAuth, AuctionSettingIds {
         // so dont worry
         IBancorExchange bancorExchange = IBancorExchange(registry.addressOf(AuctionSettingIds.CONTRACT_BANCOR_EXCHANGE));
         uint errorSpace = registry.uintOf(AuctionSettingIds.UINT_EXCHANGE_ERROR_SPACE);
-        (uint256 ringFromETH, ) = bancorExchange.buyRINGInMinRequiedETH.value(msg.value)(priceInRING, msg.sender, errorSpace);
+        (uint256 ringFromETH, uint256 ethRequired) = bancorExchange.buyRINGInMinRequiedETH.value(msg.value)(priceInRING, msg.sender, errorSpace);
 
         // double check
         uint refund = ringFromETH.sub(priceInRING);
@@ -229,7 +229,7 @@ contract ClockAuction is PausableDSAuth, AuctionSettingIds {
         // Tell the world!
         // 0x0 refers to ETH
         // NOTE: priceInRING, not priceInETH
-        emit NewBid(_tokenId, msg.sender, _referer, priceInRING, 0x0, bidMoment, returnToLastBidder);
+        emit NewBid(_tokenId, msg.sender, _referer, ethRequired, 0x0, bidMoment, returnToLastBidder);
 
         return priceInRING;
     }
