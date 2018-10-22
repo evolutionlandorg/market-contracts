@@ -3,9 +3,9 @@ pragma solidity ^0.4.24;
 import "@evolutionland/common/contracts/interfaces/ISettingsRegistry.sol";
 import "@evolutionland/common/contracts/interfaces/ERC223ReceivingContract.sol";
 import "@evolutionland/common/contracts/interfaces/ERC223.sol";
+import "@evolutionland/common/contracts/interfaces/IUserPoints.sol";
 import "@evolutionland/common/contracts/DSAuth.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
-import "./interfaces/ITradingRewardPool.sol";
 import "./AuctionSettingIds.sol";
 
 // Use proxy mode
@@ -14,7 +14,7 @@ contract RevenuePool is DSAuth, ERC223ReceivingContract, AuctionSettingIds {
     bool private singletonLock = false;
 
 //    // 10%
-//    address public tradingRewardPool;
+//    address public pointsRewardPool;
 //    // 30%
 //    address public contributionIncentivePool;
 //    // 30%
@@ -46,13 +46,13 @@ contract RevenuePool is DSAuth, ERC223ReceivingContract, AuctionSettingIds {
     function tokenFallback(address _from, uint256 _value, bytes _data) public {
 
         address ring = registry.addressOf(SettingIds.CONTRACT_RING_ERC20_TOKEN);
-        address tradingRewardPool = registry.addressOf(AuctionSettingIds.CONTRACT_TRADING_REWARD_POOL);
+        address userPoints = registry.addressOf(SettingIds.CONTRACT_USER_POINTS);
 
         if(msg.sender == ring) {
             address buyer = bytesToAddress(_data);
             // should same with trading reward percentage in settleToken;
 
-            ITradingRewardPool(tradingRewardPool).addTickets(buyer, _value / 10);
+            IUserPoints(userPoints).addPoints(buyer, _value / 1000);
         }
     }
 
@@ -60,14 +60,14 @@ contract RevenuePool is DSAuth, ERC223ReceivingContract, AuctionSettingIds {
     function settleToken(address _tokenAddress) public {
         uint balance = ERC20(_tokenAddress).balanceOf(address(this));
 
-        address tradingRewardPool = registry.addressOf(AuctionSettingIds.CONTRACT_TRADING_REWARD_POOL);
+        address pointsRewardPool = registry.addressOf(AuctionSettingIds.CONTRACT_POINTS_REWARD_POOL);
         address contributionIncentivePool = registry.addressOf(AuctionSettingIds.CONTRACT_CONTRIBUTION_INCENTIVE_POOL);
         address dividendsPool = registry.addressOf(AuctionSettingIds.CONTRACT_DIVIDENDS_POOL);
         address devPool = registry.addressOf(AuctionSettingIds.CONTRACT_DEV_POOL);
 
-        require(tradingRewardPool != 0x0 && contributionIncentivePool != 0x0 && dividendsPool != 0x0 && devPool != 0x0);
+        require(pointsRewardPool != 0x0 && contributionIncentivePool != 0x0 && dividendsPool != 0x0 && devPool != 0x0);
 
-        require(ERC223(_tokenAddress).transfer(tradingRewardPool, balance / 10, "0x0"));
+        require(ERC223(_tokenAddress).transfer(pointsRewardPool, balance / 10, "0x0"));
         require(ERC223(_tokenAddress).transfer(contributionIncentivePool, balance * 3 / 10, "0x0"));
         require(ERC223(_tokenAddress).transfer(dividendsPool, balance * 3 / 10, "0x0"));
         require(ERC223(_tokenAddress).transfer(devPool, balance * 3 / 10, "0x0"));

@@ -34,7 +34,7 @@ contract AuctionSettingIds is SettingIds {
 
     bytes32 public constant CONTRACT_REVENUE_POOL = "CONTRACT_REVENUE_POOL";
 
-    bytes32 public constant CONTRACT_TRADING_REWARD_POOL = "CONTRACT_TRADING_REWARD_POOL";
+    bytes32 public constant CONTRACT_POINTS_REWARD_POOL = "CONTRACT_POINTS_REWARD_POOL";
 
     // value belongs to [0, 10000000]
     bytes32 public constant UINT_EXCHANGE_ERROR_SPACE = "UINT_EXCHANGE_ERROR_SPACE";

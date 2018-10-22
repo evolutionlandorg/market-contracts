@@ -52,7 +52,7 @@ let clockAuctionProxy_address;
 let mysteriousTreasureProxy_address;
 let genesisHolderProxy_address;
 let revenuePoolProxy_address;
-let tradingRewardPoolProxy_address;
+let pointsRewardPoolProxy_address;
 
 
 module.exports = function (deployer, network) {
@@ -88,9 +88,9 @@ module.exports = function (deployer, network) {
             await deployer.deploy(RevenuePool);
             return deployer.deploy(Proxy)
         }).then(async() => {
-            let tradingRewardPoolProxy = await Proxy.deployed();
-            tradingRewardPoolProxy_address = tradingRewardPoolProxy.address;
-            console.log("tradingRewardPoolProxy_address: ", tradingRewardPoolProxy_address);
+            let pointsRewardPoolProxy = await Proxy.deployed();
+            pointsRewardPoolProxy_address = pointsRewardPoolProxy.address;
+            console.log("pointsRewardPoolProxy_address: ", pointsRewardPoolProxy_address);
             await deployer.deploy(TradingRewardPool);
         }).then(async () => {
 
@@ -99,8 +99,8 @@ module.exports = function (deployer, network) {
             let settingIds = await AuctionSettingIds.deployed();
 
             //register to registry
-            let tradingRewardPoolId = await settingIds.CONTRACT_TRADING_REWARD_POOL.call();
-            await registry.setAddressProperty(tradingRewardPoolId,tradingRewardPoolProxy_address);
+            let tradingRewardPoolId = await settingIds.CONTRACT_POINTS_REWARD_POOL.call();
+            await registry.setAddressProperty(tradingRewardPoolId,pointsRewardPoolProxy_address);
 
             let ringId = await settingIds.CONTRACT_RING_ERC20_TOKEN.call();
             await registry.setAddressProperty(ringId, conf.ring_address);
@@ -136,7 +136,7 @@ module.exports = function (deployer, network) {
             await Proxy.at(mysteriousTreasureProxy_address).upgradeTo(MysteriousTreasure.address);
             await Proxy.at(genesisHolderProxy_address).upgradeTo(GenesisHolder.address);
             await Proxy.at(revenuePoolProxy_address).upgradeTo(RevenuePool.address);
-            await Proxy.at(tradingRewardPoolProxy_address).upgradeTo(TradingRewardPool.address);
+            await Proxy.at(pointsRewardPoolProxy_address).upgradeTo(TradingRewardPool.address);
             console.log("UPGRADE DONE! ");
 
             // initialize
@@ -152,8 +152,8 @@ module.exports = function (deployer, network) {
             let revenuePoolProxy = await RevenuePool.at(revenuePoolProxy_address);
             await revenuePoolProxy.initializeContract(conf.registry_address);
 
-            let tradingRewardPoolProxy = await TradingRewardPool.at(tradingRewardPoolProxy_address);
-            await tradingRewardPoolProxy.initializeContract(conf.registry_address);
+            let pointsRewardPoolProxy = await TradingRewardPool.at(pointsRewardPoolProxy_address);
+            await pointsRewardPoolProxy.initializeContract(conf.registry_address);
             console.log("INITIALIZATION DONE! ");
 
             // allow treasure to modify data in landbase
@@ -164,7 +164,7 @@ module.exports = function (deployer, network) {
             // allow revenuePool to modify data in tradingRewardPool
             let tradingRewardPoolAuthority = await TradingRewardPoolAuthority.deployed();
             await tradingRewardPoolAuthority.setWhitelist(revenuePoolProxy.address, true);
-            await tradingRewardPoolProxy.setAuthority(tradingRewardPoolAuthority.address);
+            await pointsRewardPoolProxy.setAuthority(tradingRewardPoolAuthority.address);
 
             // transfer treasure's owner to clockAuction
             await mysteriousTreasureProxy.transferOwnership(clockAuctionProxy_address);
