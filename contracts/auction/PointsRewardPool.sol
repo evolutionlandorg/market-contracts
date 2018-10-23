@@ -32,8 +32,8 @@ contract PointsRewardPool is PausableDSAuth, AuctionSettingIds {
         userPoints = IUserPoints(_userPoints);
         registry = ISettingsRegistry(_registry);
 
-        smallTicketPoints = 10;
-        largeTicketPoints = 100;
+        smallTicketPoints = 10 ether;
+        largeTicketPoints = 100 ether;
     }
 
     function playWithSmallTicket() public isHuman whenNotPaused {
@@ -67,11 +67,11 @@ contract PointsRewardPool is PausableDSAuth, AuctionSettingIds {
             )));
 
         // first part
-        uint256 rewardPoints = (seed % (_pointAmount * 2)) * (_houseEdgeDenominator - 1) / _houseEdgeDenominator; 
+        uint256 rewardPoints = (seed % _pointAmount) * (_houseEdgeDenominator - 1) / _houseEdgeDenominator; 
 
         // second part.
         if (seed % _houseEdgeDenominator == 0) {
-            rewardPoints = rewardPoints.add(_pointAmount.mul(_houseEdgeDenominator - 1));
+            rewardPoints = rewardPoints.add(_pointAmount.mul(_houseEdgeDenominator - 1).div(2));
         } else if (seed % _houseEdgeDenominator == 1) {
             rewardPoints = 0;
         }
