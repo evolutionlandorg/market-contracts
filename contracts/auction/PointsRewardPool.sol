@@ -15,33 +15,40 @@ contract PointsRewardPool is PausableDSAuth, AuctionSettingIds {
     // claimedToken event
     event ClaimedTokens(address indexed token, address indexed owner, uint amount);
 
-    IUserPoints public userPoints;
+    bool private singletonLock = false;
 
     ISettingsRegistry public registry;
-
-    uint256 public smallTicketPoints;
-
-    uint256 public largeTicketPoints;
 
     modifier isHuman() {
         require(msg.sender == tx.origin, "robot is not permitted");
         _;
     }
 
-    constructor(address _userPoints, address _registry) public {
-        userPoints = IUserPoints(_userPoints);
-        registry = ISettingsRegistry(_registry);
+    /*
+     * Modifiers
+     */
+    modifier singletonLockCall() {
+        require(!singletonLock, "Only can call once");
+        _;
+        singletonLock = true;
+    }
 
-        smallTicketPoints = 10 ether;
-        largeTicketPoints = 100 ether;
+    constructor() public {
+        // initializeContract
+    }
+
+    function initializeContract(address _registry) public singletonLockCall {
+        owner = msg.sender;
+        emit LogSetOwner(msg.sender);
+        registry = ISettingsRegistry(_registry);
     }
 
     function playWithSmallTicket() public isHuman whenNotPaused {
-        _play(smallTicketPoints, 8);
+        _play(10 ether, 8);
     }
 
     function playWithLargeTicket() public isHuman whenNotPaused {
-        _play(largeTicketPoints, 10);
+        _play(100 ether, 10);
     }
 
     function totalRewardInPool(address _token) public view returns (uint256) {
@@ -51,6 +58,7 @@ contract PointsRewardPool is PausableDSAuth, AuctionSettingIds {
     function _play(uint _pointAmount, uint _houseEdgeDenominator) internal {
         // settlement by the way.
         address revenuePool = registry.addressOf(CONTRACT_REVENUE_POOL);
+        IUserPoints userPoints = IUserPoints(registry.addressOf(CONTRACT_USER_POINTS));
 
         RevenuePool(revenuePool)
             .settleToken(registry.addressOf(CONTRACT_RING_ERC20_TOKEN));

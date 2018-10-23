@@ -23,14 +23,13 @@ contract GenesisHolder is Ownable, AuctionSettingIds {
     event ClaimedTokens(address indexed token, address indexed owner, uint amount);
 
     /*
-   *  Modifiers
-   */
+     * Modifiers
+     */
     modifier singletonLockCall() {
         require(!singletonLock, "Only can call once");
         _;
         singletonLock = true;
     }
-
 
     constructor() public {
         // initializeContract

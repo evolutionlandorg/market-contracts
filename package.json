@@ -1,6 +1,6 @@
 {
   "name": "@evolutionland/market",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "description": "Market contracts for Evolution Land",
   "main": "truffle-config.js",
   "directories": {
