@@ -67,7 +67,7 @@ contract PointsRewardPool is PausableDSAuth, AuctionSettingIds {
             )));
 
         // first part
-        uint256 rewardPoints = (seed % _pointAmount) * (_houseEdgeDenominator - 1) / _houseEdgeDenominator; 
+        uint256 rewardPoints = (seed % _pointAmount).mul(_houseEdgeDenominator - 1).div(_houseEdgeDenominator); 
 
         // second part.
         if (seed % _houseEdgeDenominator == 0) {
@@ -84,7 +84,7 @@ contract PointsRewardPool is PausableDSAuth, AuctionSettingIds {
             rewardPoints = pointsSupply;
         }
 
-        uint256 rewardTokens = rewardPoints * ERC20(ring).balanceOf(address(this)) / pointsSupply;
+        uint256 rewardTokens = rewardPoints.mul(ERC20(ring).balanceOf(address(this))).div(pointsSupply);
 
         ERC20(ring).transfer(msg.sender, rewardTokens);
 
