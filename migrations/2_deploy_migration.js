@@ -1,6 +1,6 @@
 const SettingsRegistry = artifacts.require('SettingsRegistry');
 const AuctionSettingIds = artifacts.require('AuctionSettingIds');
-const MysteriousTreasure = artifacts.require('MysteriousTreasure');
+// const MysteriousTreasure = artifacts.require('MysteriousTreasure');
 const GenesisHolder = artifacts.require('GenesisHolder')
 const LandBase = artifacts.require('LandBase');
 const ObjectOwnership = artifacts.require('ObjectOwnership');
@@ -8,9 +8,9 @@ const ClockAuction = artifacts.require('ClockAuction')
 const Proxy = artifacts.require('OwnedUpgradeabilityProxy');
 const LandBaseAuthority = artifacts.require('LandBaseAuthority');
 const RevenuePool = artifacts.require('RevenuePool');
-const SmartTokenAuthority = artifacts.require('SmartTokenAuthority');
-const TradingRewardPoolAuthority = artifacts.require('TradingRewardPoolAuthority');
-const TradingRewardPool = artifacts.require('TradingRewardPool');
+// const SmartTokenAuthority = artifacts.require('SmartTokenAuthority');
+// const TradingRewardPoolAuthority = artifacts.require('TradingRewardPoolAuthority');
+// const TradingRewardPool = artifacts.require('TradingRewardPool');
 
 // bancor related
 const StandardERC223 = artifacts.require('StandardERC223');
@@ -56,7 +56,7 @@ let pointsRewardPoolProxy_address;
 
 
 module.exports = function (deployer, network) {
-    if (network == 'kovan') {
+    if (network == 'kovan1') {
 
         deployer.deploy(TradingRewardPoolAuthority);
         deployer.deploy(SmartTokenAuthority);
