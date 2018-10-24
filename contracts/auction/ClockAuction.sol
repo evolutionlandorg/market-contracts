@@ -364,6 +364,8 @@ contract ClockAuction is PausableDSAuth, AuctionSettingIds {
             uint refererBounty = computeCut(poolCutAmount, _refererCut);
             ERC20(_auction.token).transfer(_referer, refererBounty);
             ERC223(_auction.token).transfer(_pool, (poolCutAmount - refererBounty), toBytes(_buyer));
+        } else {
+            ERC223(_auction.token).transfer(_pool, poolCutAmount, toBytes(_buyer));
         }
 
         // modify bid-related member variables
