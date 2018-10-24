@@ -96,8 +96,6 @@ module.exports = function (deployer, network) {
             let settingIds = await AuctionSettingIds.deployed();
 
             //register to registry
-            let ktonId = await settingIds.CONTRACT_KTON_ERC20_TOKEN.call();
-            await registry.setAddressProperty(ktonId, conf.kton_address);
 
             let revenueId = await settingIds.CONTRACT_REVENUE_POOL.call();
             await registry.setAddressProperty(revenueId, revenuePoolProxy_address);
