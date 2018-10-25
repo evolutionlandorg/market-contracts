@@ -170,11 +170,11 @@ module.exports = function (deployer, network) {
             console.log("INITIALIZATION DONE! ");
 
             // allow treasure to modify data in landbase
-            let landBaseAuthority = await LandBaseAuthority.deployed();
-            await LandBase.at(conf.landBaseProxy_address).setAuthority(landBaseAuthority.address);
+            let landBaseProxy = await LandBase.at(conf.landBaseProxy_address);
+            await landBaseProxy.setAuthority(LandBaseAuthority.address);
 
             // transfer treasure's owner to clockAuction
-            await mysteriousTreasureProxy.transferOwnership(clockAuctionProxy_address);
+            await mysteriousTreasureProxy.setOwner(clockAuctionProxy_address);
 
             await userPointsProxy.setAuthority(UserPointsAuthority.address);
             await BancorExchange.at(conf.bancorExchange_address).setAuthority(BancorExchangeAuthority.address);
