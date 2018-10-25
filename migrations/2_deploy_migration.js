@@ -19,11 +19,11 @@ const ClockAuctionAuthority = artifacts.require('ClockAuctionAuthority');
 
 var conf = {
     //addresses
-    registry_address: '0xd8b7a3f6076872c2c37fb4d5cbfeb5bf45826ed7',
-    ring_address: '0xf8720eb6ad4a530cccb696043a0d10831e2ff60e',
-    landBaseProxy_address: '0x72eec3a6a9a8628e0f7a2dbbad5df083bd985c5f',
-    objectOwnershipProxy_address: '0xe94b9ebf9609a0d20270e8de317381ff4bcdcd79',
-    bancorExchange_address: '0x256fcbee4227fd533fb0557fc628b56af23d4dc2',
+    registry_address: '0x7050f7a4fa45b95997cd2158bfbe11137be24151',
+    ring_address: '0x04ce3ad47581de61fab830654a17bda8968e973f',
+    landBaseProxy_address: '0x3d0c96171ad34d712473499b710b560bdb5ee1f5',
+    objectOwnershipProxy_address: '0xfe3d949787cffc799ff467d5160a24a45f72fa1d',
+    bancorExchange_address: '0x6435f144d0fc09a4bfbd5dc9600f6073f12cbbed',
 
     // 4%
     uint_auction_cut: 400,
@@ -89,7 +89,7 @@ module.exports = function (deployer, network) {
             await deployer.deploy(UserPointsAuthority, [revenuePoolProxy_address, pointsRewardPoolProxy_address]);
             await deployer.deploy(LandBaseAuthority, [mysteriousTreasureProxy_address]);
             await deployer.deploy(BancorExchangeAuthority, [clockAuctionProxy_address]);
-            await deployer.deploy(ClockAuctionAuthority, genesisHolderProxy_address);
+            await deployer.deploy(ClockAuctionAuthority, [genesisHolderProxy_address]);
         }).then(async () => {
 
             // let ring = await RING.at(conf.ring_address);
