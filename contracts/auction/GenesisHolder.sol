@@ -21,6 +21,7 @@ contract GenesisHolder is Ownable, AuctionSettingIds {
 
     // claimedToken event
     event ClaimedTokens(address indexed token, address indexed owner, uint amount);
+    event ClaimedERC721Token(address indexed owner, uint256 tokenId);
 
     /*
      * Modifiers
@@ -93,6 +94,12 @@ contract GenesisHolder is Ownable, AuctionSettingIds {
         token.transfer(owner, balance);
 
         emit ClaimedTokens(_token, owner, balance);
+    }
+
+    function claimERC721Tokens(uint256 _tokenId) public onlyOwner {
+        ERC721Basic(registry.addressOf(SettingIds.CONTRACT_OBJECT_OWNERSHIP)).transferFrom(address(this), owner, _tokenId);
+
+        emit ClaimedERC721Token(owner, _tokenId);
     }
 
     function setOperator(address _operator) public onlyOwner {
