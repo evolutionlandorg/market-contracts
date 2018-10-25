@@ -168,7 +168,7 @@ module.exports = function (deployer, network) {
             await pointsRewardPoolProxy.initializeContract(conf.registry_address);
 
             let userPointsProxy = await UserPoints.at(userPointsProxy_address);
-            userPointsProxy.initializeContract();
+            await userPointsProxy.initializeContract();
             console.log("INITIALIZATION DONE! ");
 
             // allow treasure to modify data in landbase
