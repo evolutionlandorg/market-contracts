@@ -20,6 +20,8 @@ import "@evolutionland/common/contracts/UserPoints.sol";
 import "@evolutionland/common/contracts/UserPointsAuthority.sol";
 import "@evolutionland/land/contracts/MysteriousTreasure.sol";
 import "@evolutionland/common/contracts/MintAndBurnAuthority.sol";
+import "@evolutionland/bancor/solidity/contracts/BancorExchangeAuthority.sol";
+
 
 contract DeployAndTest {
 

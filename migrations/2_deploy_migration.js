@@ -13,17 +13,17 @@ const UserPoints = artifacts.require('UserPoints');
 const UserPointsAuthority = artifacts.require('UserPointsAuthority');
 const PointsRewardPool = artifacts.require('PointsRewardPool');
 const StandardERC223 = artifacts.require('StandardERC223');
-
+const BancorExchangeAuthority = artifacts.require('BancorExchangeAuthority');
+const BancorExchange = artifacts.require('BancorExchange');
+const ClockAuctionAuthority = artifacts.require('ClockAuctionAuthority');
 
 var conf = {
     //addresses
-    registry_address: '0xf21930682df28044d88623e0707facf419477041',
-    ring_address: '0xf8720eb6ad4a530cccb696043a0d10831e2ff60e',
-    landBaseProxy_address: '0x342a453e3fcbc68e3d0c7d03f44a4179a6c5071a',
-    objectOwnershipProxy_address: '0x0ce6fe3b598ece2b9cb026943ad3e2df41450481',
-    bancorExchange_address: '0x146ce62cfb2cc353a09b20efeac35de1261db495',
-    kton_address: '0x8db914ef206c7f6c36e5223fce17900b587f46d2',
-    bankProxy_address: '0x33dcd37b0b7315105859f9aa4b603339ad8825fc',
+    registry_address: '0x7050f7a4fa45b95997cd2158bfbe11137be24151',
+    ring_address: '0x04ce3ad47581de61fab830654a17bda8968e973f',
+    landBaseProxy_address: '0x3d0c96171ad34d712473499b710b560bdb5ee1f5',
+    objectOwnershipProxy_address: '0xfe3d949787cffc799ff467d5160a24a45f72fa1d',
+    bancorExchange_address: '0x6435f144d0fc09a4bfbd5dc9600f6073f12cbbed',
 
     // 4%
     uint_auction_cut: 400,
@@ -87,8 +87,9 @@ module.exports = function (deployer, network) {
             await deployer.deploy(UserPoints);
         }).then(async() => {
             await deployer.deploy(UserPointsAuthority, [revenuePoolProxy_address, pointsRewardPoolProxy_address]);
-            await deployer.deploy(LandBaseAuthority, mysteriousTreasureProxy_address);
-            await deployer.deploy(MintAndBurnAuthority, [conf.bankProxy_address, genesisHolderProxy_address]);
+            await deployer.deploy(LandBaseAuthority, [mysteriousTreasureProxy_address]);
+            await deployer.deploy(BancorExchangeAuthority, [clockAuctionProxy_address]);
+            await deployer.deploy(ClockAuctionAuthority, [genesisHolderProxy_address]);
         }).then(async () => {
 
             // let ring = await RING.at(conf.ring_address);
@@ -167,21 +168,21 @@ module.exports = function (deployer, network) {
             await pointsRewardPoolProxy.initializeContract(conf.registry_address);
 
             let userPointsProxy = await UserPoints.at(userPointsProxy_address);
-            userPointsProxy.initializeContract();
+            await userPointsProxy.initializeContract();
             console.log("INITIALIZATION DONE! ");
 
             // allow treasure to modify data in landbase
-            let landBaseAuthority = await LandBaseAuthority.deployed();
-            await LandBase.at(conf.landBaseProxy_address).setAuthority(landBaseAuthority.address);
+            let landBaseProxy = await LandBase.at(conf.landBaseProxy_address);
+            await landBaseProxy.setAuthority(LandBaseAuthority.address);
 
             // transfer treasure's owner to clockAuction
-            await mysteriousTreasureProxy.transferOwnership(clockAuctionProxy_address);
+            await mysteriousTreasureProxy.setOwner(clockAuctionProxy_address);
 
-
-            // set Authority
-            await StandardERC223.at(conf.kton_address).setAuthority(MintAndBurnAuthority.address);
-
+            // set authority
             await userPointsProxy.setAuthority(UserPointsAuthority.address);
+            await BancorExchange.at(conf.bancorExchange_address).setAuthority(BancorExchangeAuthority.address);
+
+            await clockAuctionProxy.setAuthority(ClockAuctionAuthority.address);
 
             console.log("MIGRATE SUCCESSFULLY! ")
 
