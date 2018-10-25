@@ -15,6 +15,7 @@ const PointsRewardPool = artifacts.require('PointsRewardPool');
 const StandardERC223 = artifacts.require('StandardERC223');
 const BancorExchangeAuthority = artifacts.require('BancorExchangeAuthority');
 const BancorExchange = artifacts.require('BancorExchange');
+const ClockAuctionAuthority = artifacts.require('ClockAuctionAuthority');
 
 var conf = {
     //addresses
@@ -88,6 +89,7 @@ module.exports = function (deployer, network) {
             await deployer.deploy(UserPointsAuthority, [revenuePoolProxy_address, pointsRewardPoolProxy_address]);
             await deployer.deploy(LandBaseAuthority, [mysteriousTreasureProxy_address]);
             await deployer.deploy(BancorExchangeAuthority, [clockAuctionProxy_address]);
+            await deployer.deploy(ClockAuctionAuthority, genesisHolderProxy_address);
         }).then(async () => {
 
             // let ring = await RING.at(conf.ring_address);
@@ -176,8 +178,11 @@ module.exports = function (deployer, network) {
             // transfer treasure's owner to clockAuction
             await mysteriousTreasureProxy.setOwner(clockAuctionProxy_address);
 
+            // set authority
             await userPointsProxy.setAuthority(UserPointsAuthority.address);
             await BancorExchange.at(conf.bancorExchange_address).setAuthority(BancorExchangeAuthority.address);
+
+            await clockAuctionProxy.setAuthority(ClockAuctionAuthority.address);
 
             console.log("MIGRATE SUCCESSFULLY! ")
 
