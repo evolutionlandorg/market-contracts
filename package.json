@@ -20,7 +20,7 @@
   },
   "homepage": "https://github.com/evolutionlandorg/market-contracts#readme",
   "dependencies": {
-    "@evolutionland/bancor": "^0.2.0",
+    "@evolutionland/bancor": "^0.2.1",
     "@evolutionland/common": "^1.3.3",
     "@evolutionland/land": "^1.1.5",
     "@evolutionland/upgraeability-using-unstructured-storage": "^0.1.1",

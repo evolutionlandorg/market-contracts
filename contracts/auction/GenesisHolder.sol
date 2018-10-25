@@ -4,7 +4,6 @@ import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "openzeppelin-solidity/contracts/token/ERC721/ERC721Basic.sol";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "@evolutionland/common/contracts/interfaces/ISettingsRegistry.sol";
-import "@evolutionland/common/contracts/interfaces/IBurnableERC20.sol";
 import "@evolutionland/common/contracts/interfaces/ERC223.sol";
 import "@evolutionland/land/contracts/interfaces/ILandBase.sol";
 import "./interfaces/IClockAuction.sol";

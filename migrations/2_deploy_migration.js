@@ -13,17 +13,16 @@ const UserPoints = artifacts.require('UserPoints');
 const UserPointsAuthority = artifacts.require('UserPointsAuthority');
 const PointsRewardPool = artifacts.require('PointsRewardPool');
 const StandardERC223 = artifacts.require('StandardERC223');
-
+const BancorExchangeAuthority = artifacts.require('BancorExchangeAuthority');
+const BancorExchange = artifacts.require('BancorExchange');
 
 var conf = {
     //addresses
-    registry_address: '0xf21930682df28044d88623e0707facf419477041',
+    registry_address: '0xd8b7a3f6076872c2c37fb4d5cbfeb5bf45826ed7',
     ring_address: '0xf8720eb6ad4a530cccb696043a0d10831e2ff60e',
-    landBaseProxy_address: '0x342a453e3fcbc68e3d0c7d03f44a4179a6c5071a',
-    objectOwnershipProxy_address: '0x0ce6fe3b598ece2b9cb026943ad3e2df41450481',
-    bancorExchange_address: '0x146ce62cfb2cc353a09b20efeac35de1261db495',
-    kton_address: '0x8db914ef206c7f6c36e5223fce17900b587f46d2',
-    bankProxy_address: '0x33dcd37b0b7315105859f9aa4b603339ad8825fc',
+    landBaseProxy_address: '0x72eec3a6a9a8628e0f7a2dbbad5df083bd985c5f',
+    objectOwnershipProxy_address: '0xe94b9ebf9609a0d20270e8de317381ff4bcdcd79',
+    bancorExchange_address: '0x256fcbee4227fd533fb0557fc628b56af23d4dc2',
 
     // 4%
     uint_auction_cut: 400,
@@ -87,8 +86,8 @@ module.exports = function (deployer, network) {
             await deployer.deploy(UserPoints);
         }).then(async() => {
             await deployer.deploy(UserPointsAuthority, [revenuePoolProxy_address, pointsRewardPoolProxy_address]);
-            await deployer.deploy(LandBaseAuthority, mysteriousTreasureProxy_address);
-            await deployer.deploy(MintAndBurnAuthority, [conf.bankProxy_address, genesisHolderProxy_address]);
+            await deployer.deploy(LandBaseAuthority, [mysteriousTreasureProxy_address]);
+            await deployer.deploy(BancorExchangeAuthority, [clockAuctionProxy_address]);
         }).then(async () => {
 
             // let ring = await RING.at(conf.ring_address);
@@ -177,11 +176,8 @@ module.exports = function (deployer, network) {
             // transfer treasure's owner to clockAuction
             await mysteriousTreasureProxy.transferOwnership(clockAuctionProxy_address);
 
-
-            // set Authority
-            await StandardERC223.at(conf.kton_address).setAuthority(MintAndBurnAuthority.address);
-
             await userPointsProxy.setAuthority(UserPointsAuthority.address);
+            await BancorExchange.at(conf.bancorExchange_address).setAuthority(BancorExchangeAuthority.address);
 
             console.log("MIGRATE SUCCESSFULLY! ")
 
