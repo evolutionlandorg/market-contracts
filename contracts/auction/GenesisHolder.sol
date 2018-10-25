@@ -104,4 +104,16 @@ contract GenesisHolder is Ownable, AuctionSettingIds {
     function setOperator(address _operator) public onlyOwner {
         operator = _operator;
     }
+
+    function onERC721Received(
+        address _operator,
+        address _from,
+        uint256 _tokenId,
+        bytes _data
+    )
+    public
+    returns(bytes4) {
+        return bytes4(0x150b7a02);
+    }
+
 }
