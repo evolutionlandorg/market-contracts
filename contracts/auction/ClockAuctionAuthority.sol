@@ -1,8 +1,6 @@
 pragma solidity ^0.4.0;
 
-import "@evolutionland/common/contracts/interfaces/IAuthority.sol";
-
-contract ClockAuctionAuthority is IAuthority {
+contract ClockAuctionAuthority {
 
     mapping (address => bool) public whiteList;
 
