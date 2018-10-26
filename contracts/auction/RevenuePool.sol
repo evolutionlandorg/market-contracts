@@ -61,7 +61,7 @@ contract RevenuePool is DSAuth, ERC223ReceivingContract, AuctionSettingIds {
         uint balance = ERC20(_tokenAddress).balanceOf(address(this));
 
         // to save gas when playing
-        if (balance > 0) {
+        if (balance > 10) {
             address pointsRewardPool = registry.addressOf(AuctionSettingIds.CONTRACT_POINTS_REWARD_POOL);
             address contributionIncentivePool = registry.addressOf(AuctionSettingIds.CONTRACT_CONTRIBUTION_INCENTIVE_POOL);
             address dividendsPool = registry.addressOf(AuctionSettingIds.CONTRACT_DIVIDENDS_POOL);
