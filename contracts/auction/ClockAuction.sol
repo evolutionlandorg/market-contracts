@@ -357,7 +357,7 @@ contract ClockAuction is PausableDSAuth, AuctionSettingIds {
         uint realReturnForEach = extractFromGap / 2;
 
         // here use transfer(address,uint256) for safety
-        ERC20(_auction.token).transfer(_auction.seller, realReturnForEach);
+        ERC223(_auction.token).transfer(_auction.seller, realReturnForEach, toBytes(_buyer));
         ERC20(_auction.token).transfer(_auction.lastBidder, (realReturnForEach + uint256(_auction.lastRecord)));
 
         if (_referer != 0x0) {
