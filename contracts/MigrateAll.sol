@@ -31,12 +31,6 @@ import "@evolutionland/bancor/solidity/contracts/token/SmartToken.sol";
 import "@evolutionland/bancor/solidity/contracts/utility/ContractFeatures.sol";
 import "@evolutionland/bancor/solidity/contracts/utility/Whitelist.sol";
 
-// bank
-import "@evolutionland/bank/contracts/BankSettingIds.sol";
-import "@evolutionland/bank/contracts/GringottsBank.sol";
-import "@evolutionland/bank/contracts/KTONAuthority.sol";
-
-
 contract MigrateAll {
 
 }
