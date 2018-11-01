@@ -36,6 +36,9 @@ import "@evolutionland/bank/contracts/BankSettingIds.sol";
 import "@evolutionland/bank/contracts/GringottsBank.sol";
 import "@evolutionland/bank/contracts/KTONAuthority.sol";
 
+// proxy
+import "@evolutionland/upgraeability-using-unstructured-storage/contracts/OwnedUpgradeabilityProxy.sol";
+
 
 contract MigrateAll {
 
