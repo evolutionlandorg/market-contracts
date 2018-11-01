@@ -31,6 +31,11 @@ import "@evolutionland/bancor/solidity/contracts/token/SmartToken.sol";
 import "@evolutionland/bancor/solidity/contracts/utility/ContractFeatures.sol";
 import "@evolutionland/bancor/solidity/contracts/utility/Whitelist.sol";
 
+
+// proxy
+import "@evolutionland/upgraeability-using-unstructured-storage/contracts/OwnedUpgradeabilityProxy.sol";
+
+
 contract MigrateAll {
 
 }
