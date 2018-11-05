@@ -1,6 +1,5 @@
 pragma solidity ^0.4.23;
 
-import "openzeppelin-solidity/contracts/lifecycle/Pausable.sol";
 import "openzeppelin-solidity/contracts/token/ERC721/ERC721Basic.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
@@ -12,7 +11,7 @@ import "@evolutionland/land/contracts/interfaces/IMysteriousTreasure.sol";
 import "./AuctionSettingIds.sol";
 import "./interfaces/IBancorExchange.sol";
 
-contract ClockAuction is PausableDSAuth, AuctionSettingIds {
+contract ClockAuctionV2 is PausableDSAuth, AuctionSettingIds {
     using SafeMath for *;
     event AuctionCreated(
         uint256 tokenId, address seller, uint256 startingPriceInToken, uint256 endingPriceInToken, uint256 duration, address token
