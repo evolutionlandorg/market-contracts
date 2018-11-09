@@ -1,6 +1,6 @@
 {
   "name": "@evolutionland/market",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Market contracts for Evolution Land",
   "main": "truffle-config.js",
   "directories": {
@@ -21,9 +21,9 @@
   "homepage": "https://github.com/evolutionlandorg/market-contracts#readme",
   "dependencies": {
     "@evolutionland/bancor": "^1.3.0",
-    "@evolutionland/common": "^1.3.4",
-    "@evolutionland/land": "^1.2.0",
     "@evolutionland/bank": "^1.1.1",
+    "@evolutionland/common": "^1.4.0",
+    "@evolutionland/land": "^1.2.0",
     "@evolutionland/upgraeability-using-unstructured-storage": "^0.1.1",
     "openzeppelin-solidity": "^1.12.0",
     "truffle-hdwallet-provider": "0.0.6"

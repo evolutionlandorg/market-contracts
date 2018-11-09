@@ -64,7 +64,7 @@ contract RevenuePool is DSAuth, ERC223ReceivingContract, AuctionSettingIds {
         if (balance > 10) {
             address pointsRewardPool = registry.addressOf(AuctionSettingIds.CONTRACT_POINTS_REWARD_POOL);
             address contributionIncentivePool = registry.addressOf(AuctionSettingIds.CONTRACT_CONTRIBUTION_INCENTIVE_POOL);
-            address dividendsPool = registry.addressOf(AuctionSettingIds.CONTRACT_DIVIDENDS_POOL);
+            address dividendsPool = registry.addressOf(CONTRACT_DIVIDENDS_POOL);
             address devPool = registry.addressOf(AuctionSettingIds.CONTRACT_DEV_POOL);
 
             require(pointsRewardPool != 0x0 && contributionIncentivePool != 0x0 && dividendsPool != 0x0 && devPool != 0x0);

@@ -43,8 +43,6 @@ contract AuctionSettingIds is SettingIds {
     // so compress it to what states below
     bytes32 public constant CONTRACT_CONTRIBUTION_INCENTIVE_POOL = "CONTRACT_CONTRIBUTION_POOL";
 
-    bytes32 public constant CONTRACT_DIVIDENDS_POOL = "CONTRACT_DIVIDENDS_POOL";
-
     bytes32 public constant CONTRACT_DEV_POOL = "CONTRACT_DEV_POOL";
 
 
