@@ -382,9 +382,9 @@ contract ClockAuctionV2 is PausableDSAuth, AuctionSettingIds {
     canBeStoredWith128Bits(_priceInToken)
     returns (uint256, uint256){
 
-        uint auctionCut = registry.uintOf(AuctionSettingIds.UINT_AUCTION_CUT);
+        uint auctionCut = registry.uintOf(UINT_AUCTION_CUT);
         uint256 refererCut = registry.uintOf(AuctionSettingIds.UINT_REFERER_CUT);
-        address revenuePool = registry.addressOf(AuctionSettingIds.CONTRACT_REVENUE_POOL);
+        address revenuePool = registry.addressOf(CONTRACT_REVENUE_POOL);
 
         // uint256 refererBounty;
 
