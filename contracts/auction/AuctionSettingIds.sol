@@ -18,13 +18,6 @@ contract AuctionSettingIds is SettingIds {
     // which introduce bancor protocol to regulate the price of ring
     bytes32 public constant CONTRACT_BANCOR_EXCHANGE = "BANCOR_EXCHANGE";
 
-    // Cut referer takes on each auction, measured in basis points (1/100 of a percent).
-    // which cut from transaction fee.
-    // Values 0-10,000 map to 0%-100%
-    // set refererCut to 4%
-    // refererCut = 400;
-    bytes32 public constant UINT_REFERER_CUT = "UINT_REFERER_CUT";
-
     bytes32 public constant CONTRACT_POINTS_REWARD_POOL = "CONTRACT_POINTS_REWARD_POOL";
 
     // value belongs to [0, 10000000]

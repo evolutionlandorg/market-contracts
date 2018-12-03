@@ -383,7 +383,7 @@ contract ClockAuctionV2 is PausableDSAuth, AuctionSettingIds {
     returns (uint256, uint256){
 
         uint auctionCut = registry.uintOf(UINT_AUCTION_CUT);
-        uint256 refererCut = registry.uintOf(AuctionSettingIds.UINT_REFERER_CUT);
+        uint256 refererCut = registry.uintOf(UINT_REFERER_CUT);
         address revenuePool = registry.addressOf(CONTRACT_REVENUE_POOL);
 
         // uint256 refererBounty;
