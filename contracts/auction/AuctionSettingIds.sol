@@ -29,5 +29,6 @@ contract AuctionSettingIds is SettingIds {
 
     bytes32 public constant CONTRACT_DEV_POOL = "CONTRACT_DEV_POOL";
 
-
+    // 0x474f5645524e414e43455f54454c4c4552000000000000000000000000000000
+    bytes32 public constant GOVERNANCE_TELLER = "GOVERNANCE_TELLER";
 }
