@@ -3,20 +3,20 @@ pragma solidity ^0.4.24;
 import "@evolutionland/common/contracts/interfaces/ISettingsRegistry.sol";
 import "@evolutionland/common/contracts/interfaces/ERC223ReceivingContract.sol";
 import "@evolutionland/common/contracts/interfaces/ERC223.sol";
-import "@evolutionland/common/contracts/interfaces/IReward.sol";
 import "@evolutionland/common/contracts/interfaces/IUserPoints.sol";
 import "@evolutionland/common/contracts/DSAuth.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "./AuctionSettingIds.sol";
+import "./interfaces/IGovernorPool.sol";
 
 /**
  * @title RevenuePool
  * difference between LandResourceV1:
-     change DividendPool into governanceTeller for reward
+     change DividendPool into governorPool for reward
  */
 
 // Use proxy mode
-contract RevenuePool is DSAuth, ERC223ReceivingContract, AuctionSettingIds {
+contract RevenuePoolV2 is DSAuth, ERC223ReceivingContract, AuctionSettingIds {
 
     bool private singletonLock = false;
 
@@ -71,16 +71,16 @@ contract RevenuePool is DSAuth, ERC223ReceivingContract, AuctionSettingIds {
         if (balance > 10) {
             address pointsRewardPool = registry.addressOf(AuctionSettingIds.CONTRACT_POINTS_REWARD_POOL);
             address contributionIncentivePool = registry.addressOf(AuctionSettingIds.CONTRACT_CONTRIBUTION_INCENTIVE_POOL);
-            address governanceTeller = registry.addressOf(AuctionSettingIds.GOVERNANCE_TELLER);
+            address governorPool = registry.addressOf(AuctionSettingIds.CONTRACT_GOVERNOR_POOL);
             address devPool = registry.addressOf(AuctionSettingIds.CONTRACT_DEV_POOL);
 
-            require(pointsRewardPool != 0x0 && contributionIncentivePool != 0x0 && governanceTeller != 0x0 && devPool != 0x0, "invalid addr");
+            require(pointsRewardPool != 0x0 && contributionIncentivePool != 0x0 && governorPool != 0x0 && devPool != 0x0, "invalid addr");
 
             require(ERC223(_tokenAddress).transfer(pointsRewardPool, balance / 10, "0x0"));
             require(ERC223(_tokenAddress).transfer(contributionIncentivePool, balance * 3 / 10, "0x0"));
-            if (IReward(governanceTeller).checkRewardAvailable(_tokenAddress)) {
-                ERC20(_tokenAddress).approve(governanceTeller, balance * 3 / 10);
-                IReward(governanceTeller).rewardAmount(balance * 3 / 10);
+            if (IGovernorPool(governorPool).checkRewardAvailable(_tokenAddress)) {
+                ERC20(_tokenAddress).approve(governorPool, balance * 3 / 10);
+                IGovernorPool(governorPool).rewardAmount(balance * 3 / 10);
             }
             require(ERC223(_tokenAddress).transfer(devPool, balance * 3 / 10, "0x0"));
         }
