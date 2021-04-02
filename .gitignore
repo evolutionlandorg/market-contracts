@@ -9,3 +9,5 @@ truffle-config.js
 scTopics
 coverageEnv
 scripts
+cache
+waffle.json

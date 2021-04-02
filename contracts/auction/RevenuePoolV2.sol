@@ -59,7 +59,7 @@ contract RevenuePoolV2 is DSAuth, ERC223ReceivingContract, AuctionSettingIds {
             address buyer = bytesToAddress(_data);
             // should same with trading reward percentage in settleToken;
 
-            IUserPoints(userPoints).addPoints(buyer, _value / 1000);
+            IUserPoints(userPoints).addPoints(buyer, _value / 10000);
         }
     }
 
