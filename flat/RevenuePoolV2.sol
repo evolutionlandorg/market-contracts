@@ -336,11 +336,11 @@ contract RevenuePoolV2 is DSAuth, ERC223ReceivingContract, AuctionSettingIds {
 
     bool private singletonLock = false;
 
-//    // 40%
+//    // 10%
 //    address public pointsRewardPool;
 //    // 30%
 //    address public contributionIncentivePool;
-//    // 0%
+//    // 30%
 //    address public dividendsPool;
 //    // 30%
 //    address public devPool;
@@ -392,7 +392,7 @@ contract RevenuePoolV2 is DSAuth, ERC223ReceivingContract, AuctionSettingIds {
 
             require(pointsRewardPool != 0x0 && contributionIncentivePool != 0x0 && governorPool != 0x0 && devPool != 0x0, "invalid addr");
 
-            require(ERC223(_tokenAddress).transfer(pointsRewardPool, balance * 4 / 10, "0x0"));
+            require(ERC223(_tokenAddress).transfer(pointsRewardPool, balance / 10, "0x0"));
             require(ERC223(_tokenAddress).transfer(contributionIncentivePool, balance * 3 / 10, "0x0"));
             if (IGovernorPool(governorPool).checkRewardAvailable(_tokenAddress)) {
                 ERC20(_tokenAddress).approve(governorPool, balance * 3 / 10);
