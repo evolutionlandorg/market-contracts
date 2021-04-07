@@ -7,7 +7,9 @@
     "test": "test"
   },
   "scripts": {
-    "test": "mocha"
+    "test": "mocha",
+    "build": "npx waffle",
+    "flatten": "npx waffle flatten"
   },
   "repository": {
     "type": "git",
