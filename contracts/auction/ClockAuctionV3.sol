@@ -1,4 +1,4 @@
-pragma solidity ^0.4.23;
+pragma solidity ^0.4.24;
 
 import "openzeppelin-solidity/contracts/token/ERC721/ERC721Basic.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
@@ -8,6 +8,7 @@ import "@evolutionland/common/contracts/interfaces/ERC223.sol";
 import "@evolutionland/common/contracts/PausableDSAuth.sol";
 import "@evolutionland/land/contracts/interfaces/IMysteriousTreasure.sol";
 import "./AuctionSettingIds.sol";
+import "./interfaces/IInterstellarEncoder.sol";
 
 
 /**
@@ -15,6 +16,8 @@ import "./AuctionSettingIds.sol";
  * @dev generic clock auction contract, support ERC721 tokens.
  * difference between ClockAuctionV2:
      1. remove `bidWithETH`, remove deprecated BancorExchange interact.
+     2. change `claimLandAsset` to `claimAsset`.
+     3. remove `isHuman` modifier.
  */
 contract ClockAuctionV3 is PausableDSAuth, AuctionSettingIds {
     using SafeMath for *;
@@ -60,6 +63,9 @@ contract ClockAuctionV3 is PausableDSAuth, AuctionSettingIds {
         address lastReferer;
     }
 
+    // 0x434f4e54524143545f494e5445525354454c4c41525f454e434f444552000000
+    bytes32 public constant CONTRACT_INTERSTELLAR_ENCODER = "CONTRACT_INTERSTELLAR_ENCODER";
+
     bool private singletonLock = false;
 
     ISettingsRegistry public registry;
@@ -76,10 +82,10 @@ contract ClockAuctionV3 is PausableDSAuth, AuctionSettingIds {
         singletonLock = true;
     }
 
-    modifier isHuman() {
-        require(msg.sender == tx.origin, "robot is not permitted");
-        _;
-    }
+    // modifier isHuman() {
+    //     require(msg.sender == tx.origin, "robot is not permitted");
+    //     _;
+    // }
 
     // Modifiers to check that inputs can be safely stored with a certain
     // number of bits. We use constants and multiple modifiers to save gas.
@@ -236,7 +242,7 @@ contract ClockAuctionV3 is PausableDSAuth, AuctionSettingIds {
 
     // TODO: advice: offer some reward for the person who claimed
     // @dev claim _tokenId for auction's lastBidder
-    function claimLandAsset(uint _tokenId) public isHuman isOnAuction(_tokenId) {
+    function claimAsset(uint _tokenId) public isOnAuction(_tokenId) {
         // Get a reference to the auction struct
         Auction storage auction = tokenIdToAuction[_tokenId];
 
@@ -246,8 +252,11 @@ contract ClockAuctionV3 is PausableDSAuth, AuctionSettingIds {
         require(auction.lastBidder != 0x0 && now >= auction.lastBidStartAt + registry.uintOf(AuctionSettingIds.UINT_AUCTION_BID_WAITING_TIME),
             "this auction has not finished yet, try again later");
 
-        IMysteriousTreasure mysteriousTreasure = IMysteriousTreasure(registry.addressOf(AuctionSettingIds.CONTRACT_MYSTERIOUS_TREASURE));
-        mysteriousTreasure.unbox(_tokenId);
+        address interstellarEncoder = registry.addressOf(CONTRACT_INTERSTELLAR_ENCODER);
+        if (IInterstellarEncoder(interstellarEncoder).getObjectClass(_tokenId) == uint8(IInterstellarEncoder.ObjectClass.LAND)) {
+            IMysteriousTreasure mysteriousTreasure = IMysteriousTreasure(registry.addressOf(AuctionSettingIds.CONTRACT_MYSTERIOUS_TREASURE));
+            mysteriousTreasure.unbox(_tokenId);
+        }
 
         address lastBidder = auction.lastBidder;
         uint lastRecord = auction.lastRecord;
