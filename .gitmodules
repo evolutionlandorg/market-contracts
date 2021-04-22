@@ -4,3 +4,6 @@
 [submodule "lib/common-contracts"]
 	path = lib/common-contracts
 	url = https://github.com/evolutionlandorg/common-contracts
+[submodule "lib/upgradeability-using-unstructured-storage"]
+	path = lib/upgradeability-using-unstructured-storage
+	url = https://github.com/evolutionlandorg/upgradeability-using-unstructured-storage
