@@ -6,10 +6,8 @@ import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "@evolutionland/common/contracts/interfaces/ISettingsRegistry.sol";
 import "@evolutionland/common/contracts/interfaces/ERC223.sol";
 import "@evolutionland/common/contracts/PausableDSAuth.sol";
-import "@evolutionland/land/contracts/interfaces/ILandBase.sol";
-import "@evolutionland/land/contracts/interfaces/IMysteriousTreasure.sol";
+import "./interfaces/IMysteriousTreasure.sol";
 import "./AuctionSettingIds.sol";
-import "./interfaces/IBancorExchange.sol";
 
 contract ClockAuctionV2 is PausableDSAuth, AuctionSettingIds {
     using SafeMath for *;
@@ -202,42 +200,43 @@ contract ClockAuctionV2 is PausableDSAuth, AuctionSettingIds {
     isOnAuction(_tokenId)
     returns (uint256)
     {
-        require(msg.value > 0);
-        // Get a reference to the auction struct
-        Auction storage auction = tokenIdToAuction[_tokenId];
-        // can only bid the auction that allows ring
-        require(auction.token == registry.addressOf(SettingIds.CONTRACT_RING_ERC20_TOKEN));
+        revert("remove");
+        // require(msg.value > 0);
+        // // Get a reference to the auction struct
+        // Auction storage auction = tokenIdToAuction[_tokenId];
+        // // can only bid the auction that allows ring
+        // require(auction.token == registry.addressOf(SettingIds.CONTRACT_RING_ERC20_TOKEN));
 
-        // Check that the incoming bid is higher than the current
-        // price
-        uint256 priceInRING = getCurrentPriceInToken(_tokenId);
-        // assure msg.value larger than current price in ring
-        // priceInRING represents minimum return
-        // if return is smaller than priceInRING
-        // it will be reverted in bancorprotocol
-        // so dont worry
-        IBancorExchange bancorExchange = IBancorExchange(registry.addressOf(AuctionSettingIds.CONTRACT_BANCOR_EXCHANGE));
-        uint errorSpace = registry.uintOf(AuctionSettingIds.UINT_EXCHANGE_ERROR_SPACE);
-        (uint256 ringFromETH, uint256 ethRequired) = bancorExchange.buyRINGInMinRequiedETH.value(msg.value)(priceInRING, msg.sender, errorSpace);
+        // // Check that the incoming bid is higher than the current
+        // // price
+        // uint256 priceInRING = getCurrentPriceInToken(_tokenId);
+        // // assure msg.value larger than current price in ring
+        // // priceInRING represents minimum return
+        // // if return is smaller than priceInRING
+        // // it will be reverted in bancorprotocol
+        // // so dont worry
+        // IBancorExchange bancorExchange = IBancorExchange(registry.addressOf(AuctionSettingIds.CONTRACT_BANCOR_EXCHANGE));
+        // uint errorSpace = registry.uintOf(AuctionSettingIds.UINT_EXCHANGE_ERROR_SPACE);
+        // (uint256 ringFromETH, uint256 ethRequired) = bancorExchange.buyRINGInMinRequiedETH.value(msg.value)(priceInRING, msg.sender, errorSpace);
 
-        // double check
-        uint refund = ringFromETH.sub(priceInRING);
-        if (refund > 0) {
-            // if there is surplus RING
-            // then give it back to the msg.sender
-            ERC20(registry.addressOf(SettingIds.CONTRACT_RING_ERC20_TOKEN)).transfer(msg.sender, refund);
-        }
+        // // double check
+        // uint refund = ringFromETH.sub(priceInRING);
+        // if (refund > 0) {
+        //     // if there is surplus RING
+        //     // then give it back to the msg.sender
+        //     ERC20(registry.addressOf(SettingIds.CONTRACT_RING_ERC20_TOKEN)).transfer(msg.sender, refund);
+        // }
 
-        uint bidMoment;
-        uint returnToLastBidder;
-        (bidMoment, returnToLastBidder) = _bidProcess(msg.sender, auction, priceInRING, _referer);
+        // uint bidMoment;
+        // uint returnToLastBidder;
+        // (bidMoment, returnToLastBidder) = _bidProcess(msg.sender, auction, priceInRING, _referer);
 
-        // Tell the world!
-        // 0x0 refers to ETH
-        // NOTE: priceInRING, not priceInETH
-        emit NewBidWithETH(_tokenId, msg.sender, _referer, ethRequired, priceInRING, 0x0, bidMoment, returnToLastBidder);
+        // // Tell the world!
+        // // 0x0 refers to ETH
+        // // NOTE: priceInRING, not priceInETH
+        // emit NewBidWithETH(_tokenId, msg.sender, _referer, ethRequired, priceInRING, 0x0, bidMoment, returnToLastBidder);
 
-        return priceInRING;
+        // return priceInRING;
     }
 
     // @dev bid with RING. Computes the price and transfers winnings.
