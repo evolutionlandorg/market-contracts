@@ -12,26 +12,6 @@ import "@evolutionland/common/contracts/TokenLocationAuthority.sol";
 import "@evolutionland/common/contracts/UserPoints.sol";
 import "@evolutionland/common/contracts/UserPointsAuthority.sol";
 
-// land
-import "@evolutionland/land/contracts/LandBase.sol";
-import "@evolutionland/land/contracts/LandBaseAuthority.sol";
-import "@evolutionland/land/contracts/MysteriousTreasure.sol";
-
-// bancor
-import "@evolutionland/bancor/solidity/contracts/BancorExchange.sol";
-import "@evolutionland/bancor/solidity/contracts/BancorExchangeAuthority.sol";
-import "@evolutionland/bancor/solidity/contracts/BancorNetwork.sol";
-import "@evolutionland/bancor/solidity/contracts/ContractIds.sol";
-import "@evolutionland/bancor/solidity/contracts/FeatureIds.sol";
-import "@evolutionland/bancor/solidity/contracts/converter/BancorConverter.sol";
-import "@evolutionland/bancor/solidity/contracts/converter/BancorFormula.sol";
-import "@evolutionland/bancor/solidity/contracts/converter/BancorGasPriceLimit.sol";
-import "@evolutionland/bancor/solidity/contracts/token/EtherToken.sol";
-import "@evolutionland/bancor/solidity/contracts/token/SmartToken.sol";
-import "@evolutionland/bancor/solidity/contracts/utility/ContractFeatures.sol";
-import "@evolutionland/bancor/solidity/contracts/utility/Whitelist.sol";
-
-
 // proxy
 import "@evolutionland/upgraeability-using-unstructured-storage/contracts/OwnedUpgradeabilityProxy.sol";
 
