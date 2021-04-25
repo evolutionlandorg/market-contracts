@@ -16,7 +16,7 @@ import "./interfaces/IGovernorPool.sol";
  */
 
 // Use proxy mode
-contract RevenuePoolV2 is DSAuth, ERC223ReceivingContract, AuctionSettingIds {
+contract RevenuePoolV3 is DSAuth, ERC223ReceivingContract, AuctionSettingIds {
 
     bool private singletonLock = false;
 
