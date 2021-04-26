@@ -13,7 +13,7 @@ import "@evolutionland/common/contracts/UserPoints.sol";
 import "@evolutionland/common/contracts/UserPointsAuthority.sol";
 
 // proxy
-import "@evolutionland/upgraeability-using-unstructured-storage/contracts/OwnedUpgradeabilityProxy.sol";
+// import "@evolutionland/upgraeability-using-unstructured-storage/contracts/OwnedUpgradeabilityProxy.sol";
 
 
 contract MigrateAll {
