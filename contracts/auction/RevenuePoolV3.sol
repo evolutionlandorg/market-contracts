@@ -7,7 +7,6 @@ import "@evolutionland/common/contracts/interfaces/IUserPoints.sol";
 import "@evolutionland/common/contracts/DSAuth.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "./AuctionSettingIds.sol";
-import "./interfaces/IGovernorPool.sol";
 
 /**
  * @title RevenuePool
@@ -20,11 +19,11 @@ contract RevenuePoolV3 is DSAuth, ERC223ReceivingContract, AuctionSettingIds {
 
     bool private singletonLock = false;
 
-//    // 10%
+//    // 40%
 //    address public pointsRewardPool;
 //    // 30%
 //    address public contributionIncentivePool;
-//    // 30%
+//    // 0%
 //    address public dividendsPool;
 //    // 30%
 //    address public devPool;
@@ -76,12 +75,8 @@ contract RevenuePoolV3 is DSAuth, ERC223ReceivingContract, AuctionSettingIds {
 
             require(pointsRewardPool != 0x0 && contributionIncentivePool != 0x0 && governorPool != 0x0 && devPool != 0x0, "invalid addr");
 
-            require(ERC223(_tokenAddress).transfer(pointsRewardPool, balance / 10, "0x0"));
+            require(ERC223(_tokenAddress).transfer(pointsRewardPool, balance * 4 / 10, "0x0"));
             require(ERC223(_tokenAddress).transfer(contributionIncentivePool, balance * 3 / 10, "0x0"));
-            if (IGovernorPool(governorPool).checkRewardAvailable(_tokenAddress)) {
-                ERC20(_tokenAddress).approve(governorPool, balance * 3 / 10);
-                IGovernorPool(governorPool).rewardAmount(balance * 3 / 10);
-            }
             require(ERC223(_tokenAddress).transfer(devPool, balance * 3 / 10, "0x0"));
         }
 
