@@ -193,7 +193,7 @@ contract ClockAuction is PausableDSAuth, AuctionSettingIds {
     /// @param _tokenId - ID of token to bid on.
     /// @dev bid with eth(in wei). Computes the price and transfers winnings.
     /// Does NOT transfer ownership of token.
-    function bidWithETH(uint256 _tokenId, address _referer)
+    function bidWithETH(uint256 _tokenId, address /*_referer*/)
     public
     payable
     whenNotPaused
@@ -270,7 +270,7 @@ contract ClockAuction is PausableDSAuth, AuctionSettingIds {
     // to invoke this function
     // @param _data - need to be generated from (tokenId + referer)
 
-    function tokenFallback(address _from, uint256 _valueInToken, bytes _data) public whenNotPaused {
+    function tokenFallback(address _from, uint256 _valueInToken, bytes /*_data*/) public whenNotPaused {
         uint tokenId;
         address referer;
         assembly {
@@ -508,6 +508,7 @@ contract ClockAuction is PausableDSAuth, AuctionSettingIds {
         bytes //_data
     )
     public
+    pure
     returns (bytes4) {
         return bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"));
     }

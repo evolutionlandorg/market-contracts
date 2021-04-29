@@ -40,7 +40,7 @@ contract GenesisHolder is Ownable, AuctionSettingIds {
         registry = _registry;
     }
 
-    function tokenFallback(address _from, uint256 _value, bytes _data) public {
+    function tokenFallback(address /*_from*/, uint256 _value, bytes _data) public {
 
         address ring = registry.addressOf(SettingIds.CONTRACT_RING_ERC20_TOKEN);
         address kton = registry.addressOf(SettingIds.CONTRACT_KTON_ERC20_TOKEN);
@@ -105,12 +105,13 @@ contract GenesisHolder is Ownable, AuctionSettingIds {
     }
 
     function onERC721Received(
-        address _operator,
-        address _from,
-        uint256 _tokenId,
-        bytes _data
+        address /*_operator*/,
+        address /*_from*/,
+        uint256 /*_tokenId*/,
+        bytes /*_data*/
     )
     public
+    pure
     returns(bytes4) {
         return bytes4(0x150b7a02);
     }

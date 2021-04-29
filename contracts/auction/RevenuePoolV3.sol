@@ -49,7 +49,7 @@ contract RevenuePoolV3 is DSAuth, ERC223ReceivingContract, AuctionSettingIds {
         registry = ISettingsRegistry(_registry);
     }
 
-    function tokenFallback(address _from, uint256 _value, bytes _data) public {
+    function tokenFallback(address /*_from*/, uint256 _value, bytes _data) public {
 
         address ring = registry.addressOf(SettingIds.CONTRACT_RING_ERC20_TOKEN);
         address userPoints = registry.addressOf(SettingIds.CONTRACT_USER_POINTS);

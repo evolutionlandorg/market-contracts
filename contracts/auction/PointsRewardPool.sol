@@ -43,7 +43,7 @@ contract PointsRewardPool is PausableDSAuth, AuctionSettingIds {
         registry = ISettingsRegistry(_registry);
     }
 
-    function tokenFallback(address _from, uint256 _value, bytes _data) public {
+    function tokenFallback(address /*_from*/, uint256 /*_value*/, bytes /*_data*/) public pure {
         return;
     }
 
