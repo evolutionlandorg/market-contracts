@@ -94,20 +94,20 @@ An orderbook is just a list of orders that an exchange uses to record the intere
 |             |                                                           |             |
 |             |                       +--------------+                    |             |
 |             |                       |              |                    |             |
-|             |      encode sell      |              |                    |             |
-|   sellers   |      create order     |   orderbook  |                    |             |
+|   sellers   |      encode sell      |              |                    |             |
+|             |      create order     |   orderbook  |                    |             |
 |             +----------------------->    server    |                    |             |
 |             |      sign order       |              |                    |             |
 |             |    (1)post order      |              |                    |             |
 |             |                       |              |                    |             |
 +-------------+                       |              |   (4)atomic match  |             |
-|             |                       |              +-------------------->             |
+|             |                       |    relayer   +-------------------->             |
 |             |     (2)fetch order    |              |                    |             |
 |             <-----------------------+              |                    |             |
 |             |                       |              |                    |             |
 |             |      encode buy       |              |                    |             |
-|    buyers   |      create order     |              |                    |             |
-|             +----------------------->              |                    |             |
+|             |      create order     |              |                    |             |
+|   buyers    +----------------------->              |                    |             |
 |             |      sign order       |              |                    |             |
 |             |     (3)post order     |              |                    |             |
 |             |                       +--------------+                    |             |
@@ -118,6 +118,22 @@ An orderbook is just a list of orders that an exchange uses to record the intere
 |             |                   (0)registry proxy                       |             |
 +-------------+                                                           +-------------+
 ```
+## Inconclusion
+1. Leverage existing orderooks.
+	* Advantages:
+		- OpenSea [Ecosystem](https://docs.opensea.io/docs/opensea-presale) (OpenSea API, JS SDK, whitelabel, Referral / affiliate system)
+		- Less Work.
+	* Disadvantages:
+		- Only Support Atlantis. Matic.
+2. Deploy your own.
+	* Advantages:
+		- Supprot all lands.
+		- More control.
+	* Disadvantages:
+		- More Work to maintain orderbook.
+
+Since only Atlantis has Gas issue. We could leverage existing orderbook and join the OpenSea Ecosystem. Also more and more layer2 solutions can solve the Gas issue in the near future.
+
 ## Terminology
 * Maker: make liquidity
 * Taker: take liquidity
