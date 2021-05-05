@@ -4,7 +4,7 @@
 
 Wyvern is a protocol for the decentralized exchange of nonfungible digital assets. Like decentralized fungible token exchange protocols, [Etherdelta](https://etherdelta.com) and [0x](https://0xproject.com), Wyvern uses a hybrid model: signed orders are transmitted and stored off-chain, while all state transitions are settled on-chain, meaning that protocol users need not trust any counterparty with custody of their assets. Unlike prior protocols, Wyvern is representation-agnostic: the protocol uses a proxy account system to abstract over the space of Ethereum transactions, allowing arbitrary state transitions to be bought and sold without the deployment of any additional smart contracts. Wyvern supports buy- and sell-side orders, fixed price and Dutch auction pricing, and asset criteria specification — orders may be placed for specific assets, or for any assets with specific properties.
 
-## contract-architecture
+## Contract Architecture
 ```
 .
 ├── exchange
@@ -28,7 +28,7 @@ The exchange contracts implement the core protocol logic.
 
 ## [Order Schema](./order-schema.md)
 
-## market-architecture
+## Market Architecture
 
 ```
 +----------------------------------+
