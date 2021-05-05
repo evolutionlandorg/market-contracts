@@ -45,7 +45,7 @@ The exchange contracts implement the core protocol logic.
 ```
 
 ## Orderbook Server / Relayer
-* [Example](https://github.com/ProjectWyvern/example-orderbook-server) (No maintenance for three years)
+* [Example](https://github.com/ProjectWyvern/example-orderbook-server) (No maintenance for three years)  
 An orderbook is just a list of orders that an exchange uses to record the interest of buyers and sellers. On OpenSea, most actions are off-chain, meaning they generate orders that are stored in the orderbook and can be fulfilled by a matching order from another user.
 
 ## Integration
