@@ -132,8 +132,6 @@ An orderbook is just a list of orders that an exchange uses to record the intere
 	* Disadvantages:
 		- More Work to maintain orderbook.
 
-Since only Atlantis has Gas issue. We could leverage existing orderbook and join the OpenSea Ecosystem. Also more and more layer2 solutions can solve the Gas issue in the near future.
-
 ## Terminology
 * Maker: make liquidity
 * Taker: take liquidity
