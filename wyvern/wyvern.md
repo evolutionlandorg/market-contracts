@@ -56,6 +56,7 @@ An orderbook is just a list of orders that an exchange uses to record the intere
 * [OpenSea API](https://docs.opensea.io/reference#api-overview): Backend orderbooks.
 * [opensea-js](https://github.com/ProjectOpenSea/opensea-js): Interact with OpenSea API. 
 * [opensea-whitelabel](https://github.com/ProjectOpenSea/opensea-whitelabel): Embed a fully functional OpenSea marketplace on your own website.
+* [embeddable-nfts](https://github.com/ProjectOpenSea/embeddable-nfts): Easily embed OpenSea listings in your website.
 
 ### Which actions require gas fees on OpenSea?
 
