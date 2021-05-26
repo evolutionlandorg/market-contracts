@@ -4,8 +4,8 @@ import "openzeppelin-solidity/contracts/token/ERC721/ERC721Basic.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "@evolutionland/common/contracts/interfaces/ISettingsRegistry.sol";
-import "@evolutionland/common/contracts/interfaces/ERC223.sol";
 import "@evolutionland/common/contracts/PausableDSAuth.sol";
+import "@evolutionland/common/contracts/interfaces/IUserPoints.sol";
 import "./interfaces/IMysteriousTreasure.sol";
 import "./AuctionSettingIds.sol";
 
@@ -239,20 +239,15 @@ contract ClockAuctionV2 is PausableDSAuth, AuctionSettingIds {
         // return priceInRING;
     }
 
+
     // @dev bid with RING. Computes the price and transfers winnings.
-    function _bidWithToken(address _from, uint256 _tokenId, uint256 _valueInToken, address _referer) internal returns (uint256){
+    function bidWithToken(address _from, uint256 _tokenId, address _referer) public whenNotPaused returns (uint256){
+        require(tokenIdToAuction[_tokenId].startedAt > 0);
         // Get a reference to the auction struct
         Auction storage auction = tokenIdToAuction[_tokenId];
-
         // Check that the incoming bid is higher than the current price
         uint priceInToken = getCurrentPriceInToken(_tokenId);
-        require(_valueInToken >= priceInToken,
-            "your offer is lower than the current price, try again with a higher one.");
-        uint refund = _valueInToken - priceInToken;
-
-        if (refund > 0) {
-            ERC20(auction.token).transfer(_from, refund);
-        }
+        require(ERC20(auction.token).transferFrom(msg.sender, address(this), priceInToken), 'transfer failed');
 
         uint bidMoment;
         uint returnToLastBidder;
@@ -262,28 +257,6 @@ contract ClockAuctionV2 is PausableDSAuth, AuctionSettingIds {
         emit NewBid(_tokenId, _from, _referer, priceInToken, auction.token, bidMoment, returnToLastBidder);
 
         return priceInToken;
-    }
-
-    // here to handle bid for LAND(NFT) using RING
-    // @dev bidder must use RING.transfer(address(this), _valueInRING, bytes32(_tokenId)
-    // to invoke this function
-    // @param _data - need to be generated from (tokenId + referer)
-
-    function tokenFallback(address _from, uint256 _valueInToken, bytes /*_data*/) public whenNotPaused {
-        uint tokenId;
-        address referer;
-        assembly {
-            let ptr := mload(0x40)
-            calldatacopy(ptr, 0, calldatasize)
-            tokenId := mload(add(ptr, 132))
-            referer := mload(add(ptr, 164))
-        }
-
-        // safer for users
-        require (msg.sender == tokenIdToAuction[tokenId].token);
-        require(tokenIdToAuction[tokenId].startedAt > 0);
-
-        _bidWithToken(_from, tokenId, _valueInToken, referer);
     }
 
     // TODO: advice: offer some reward for the person who claimed
@@ -311,24 +284,51 @@ contract ClockAuctionV2 is PausableDSAuth, AuctionSettingIds {
         emit AuctionSuccessful(_tokenId, lastRecord, lastBidder);
     }
 
-    function _firstPartBid(uint _auctionCut, uint _refererCut, address _pool, address _buyer, Auction storage _auction, uint _priceInToken, address _referer) internal returns (uint, uint){
+    function _sellerPay(address _token, address _pool, address _seller, address _buyer, uint256 _value) internal {
+        address userPoints = registry.addressOf(SettingIds.CONTRACT_USER_POINTS);
+        address ring = registry.addressOf(SettingIds.CONTRACT_RING_ERC20_TOKEN);
+        if (_seller == registry.addressOf(AuctionSettingIds.CONTRACT_GENESIS_HOLDER)) {
+            ERC20(_token).transfer(_pool, _value);
+            if (_token == ring) {
+                IUserPoints(userPoints).addPoints(_buyer, _value);
+            }
+        } else {
+            ERC20(_token).transfer(_seller, _value);
+        }
+    }
+
+    function _deductFee(address _referer, address _token, address _pool, address _buyer, uint256 _ownerCutAmount) internal {
+        address userPoints = registry.addressOf(SettingIds.CONTRACT_USER_POINTS);
+        address ring = registry.addressOf(SettingIds.CONTRACT_RING_ERC20_TOKEN);
+        uint256 refererCut = registry.uintOf(UINT_REFERER_CUT);
+        if (_referer != 0x0) {
+            uint256 refererBounty = computeCut(_ownerCutAmount, refererCut);
+            uint256 fee = _ownerCutAmount - refererBounty;
+            ERC20(_token).transfer(_referer, refererBounty);
+            ERC20(_token).transfer(_pool, fee);
+            if (_token == ring) {
+                IUserPoints(userPoints).addPoints(_buyer, fee);
+            }
+        } else {
+            ERC20(_token).transfer(_pool, _ownerCutAmount);
+            if (_token == ring) {
+                IUserPoints(userPoints).addPoints(_buyer, _ownerCutAmount);
+            }
+        }
+    }
+
+    function _firstPartBid(uint _auctionCut, address _pool, address _buyer, Auction storage _auction, uint _priceInToken, address _referer) internal returns (uint, uint){
         require(now >= uint256(_auction.startedAt));
         //  Calculate the auctioneer's cut.
         // (NOTE: computeCut() is guaranteed to return a
         //  value <= price, so this subtraction can't go negative.)
         // TODO: token to the seller
         uint256 ownerCutAmount = computeCut(_priceInToken, _auctionCut);
-
         // transfer to the seller
-        ERC223(_auction.token).transfer(_auction.seller, (_priceInToken - ownerCutAmount), toBytes(_buyer));
+        _sellerPay(_auction.token, _pool, _auction.seller, _buyer, (_priceInToken - ownerCutAmount));
 
-        if (_referer != 0x0) {
-            uint refererBounty = computeCut(ownerCutAmount, _refererCut);
-            ERC20(_auction.token).transfer(_referer, refererBounty);
-            ERC223(_auction.token).transfer(_pool, (ownerCutAmount - refererBounty), toBytes(_buyer));
-        } else {
-            ERC223(_auction.token).transfer(_pool, ownerCutAmount, toBytes(_buyer));
-        }
+        // deduct fee
+        _deductFee(_referer, _auction.token, _pool, _buyer, ownerCutAmount);
 
         // modify bid-related member variables
         _auction.lastBidder = _buyer;
@@ -340,7 +340,7 @@ contract ClockAuctionV2 is PausableDSAuth, AuctionSettingIds {
     }
 
 
-    function _secondPartBid(uint _auctionCut, uint _refererCut, address _pool, address _buyer, Auction storage _auction, uint _priceInToken, address _referer) internal returns (uint, uint){
+    function _secondPartBid(uint _auctionCut, address _pool, address _buyer, Auction storage _auction, uint _priceInToken, address _referer) internal returns (uint, uint){
         // TODO: repair bug of first bid's time limitation
         // if this the first bid, there is no time limitation
         require(now <= _auction.lastBidStartAt + registry.uintOf(AuctionSettingIds.UINT_AUCTION_BID_WAITING_TIME), "It's too late.");
@@ -353,18 +353,12 @@ contract ClockAuctionV2 is PausableDSAuth, AuctionSettingIds {
         uint poolCutAmount = computeCut(surplus, _auctionCut);
         uint realReturnForEach = (surplus - poolCutAmount) / 2;
         uint returnToLastBidder = realReturnForEach + uint256(_auction.lastRecord);
-
         // here use transfer(address,uint256) for safety
-        ERC223(_auction.token).transfer(_auction.seller, realReturnForEach, toBytes(_buyer));
+        _sellerPay(_auction.token, _pool, _auction.seller, _buyer, realReturnForEach);
         ERC20(_auction.token).transfer(_auction.lastBidder, returnToLastBidder);
 
-        if (_referer != 0x0) {
-            uint refererBounty = computeCut(poolCutAmount, _refererCut);
-            ERC20(_auction.token).transfer(_referer, refererBounty);
-            ERC223(_auction.token).transfer(_pool, (poolCutAmount - refererBounty), toBytes(_buyer));
-        } else {
-            ERC223(_auction.token).transfer(_pool, poolCutAmount, toBytes(_buyer));
-        }
+        // deduct fee
+        _deductFee(_referer, _auction.token, _pool, _buyer, poolCutAmount);
 
         // modify bid-related member variables
         _auction.lastBidder = _buyer;
@@ -382,7 +376,6 @@ contract ClockAuctionV2 is PausableDSAuth, AuctionSettingIds {
     returns (uint256, uint256){
 
         uint auctionCut = registry.uintOf(UINT_AUCTION_CUT);
-        uint256 refererCut = registry.uintOf(UINT_REFERER_CUT);
         address revenuePool = registry.addressOf(CONTRACT_REVENUE_POOL);
 
         // uint256 refererBounty;
@@ -390,14 +383,14 @@ contract ClockAuctionV2 is PausableDSAuth, AuctionSettingIds {
         // the first bid
         if (_auction.lastBidder == 0x0 && _priceInToken > 0) {
 
-            return _firstPartBid(auctionCut, refererCut, revenuePool, _buyer, _auction, _priceInToken, _referer);
+            return _firstPartBid(auctionCut, revenuePool, _buyer, _auction, _priceInToken, _referer);
         }
 
         // TODO: the math calculation needs further check
         //  not the first bid
         if (_auction.lastRecord > 0 && _auction.lastBidder != 0x0) {
 
-            return _secondPartBid(auctionCut, refererCut, revenuePool, _buyer, _auction, _priceInToken, _referer);
+            return _secondPartBid(auctionCut, revenuePool, _buyer, _auction, _priceInToken, _referer);
         }
 
     }
@@ -621,11 +614,5 @@ contract ClockAuctionV2 is PausableDSAuth, AuctionSettingIds {
 
             return uint256(currentPriceInToken);
         }
-    }
-
-
-    function toBytes(address x) public pure returns (bytes b) {
-        b = new bytes(32);
-        assembly { mstore(add(b, 32), x) }
     }
 }
