@@ -6,7 +6,6 @@ import "@evolutionland/common/contracts/MintAndBurnAuthority.sol";
 import "@evolutionland/common/contracts/ObjectOwnership.sol";
 import "@evolutionland/common/contracts/ObjectOwnershipAuthority.sol";
 import "@evolutionland/common/contracts/SettingsRegistry.sol";
-import "@evolutionland/common/contracts/StandardERC223.sol";
 import "@evolutionland/common/contracts/TokenLocation.sol";
 import "@evolutionland/common/contracts/TokenLocationAuthority.sol";
 import "@evolutionland/common/contracts/UserPoints.sol";

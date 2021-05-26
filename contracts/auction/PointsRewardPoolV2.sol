@@ -43,10 +43,6 @@ contract PointsRewardPoolV2 is PausableDSAuth, AuctionSettingIds {
         registry = ISettingsRegistry(_registry);
     }
 
-    function tokenFallback(address /*_from*/, uint256 /*_value*/, bytes /*_data*/) public pure {
-        return;
-    }
-
     function playWithSmallTicket() public isHuman whenNotPaused {
         _play(10 ether, 8);
     }

@@ -16,17 +16,19 @@ contract AuctionSettingIds is SettingIds {
 
     // users change eth(in wei) into ring with bancor exchange
     // which introduce bancor protocol to regulate the price of ring
-    bytes32 public constant CONTRACT_BANCOR_EXCHANGE = "BANCOR_EXCHANGE";
+    // bytes32 public constant CONTRACT_BANCOR_EXCHANGE = "BANCOR_EXCHANGE";
 
     bytes32 public constant CONTRACT_POINTS_REWARD_POOL = "CONTRACT_POINTS_REWARD_POOL";
 
     // value belongs to [0, 10000000]
-    bytes32 public constant UINT_EXCHANGE_ERROR_SPACE = "UINT_EXCHANGE_ERROR_SPACE";
+    // bytes32 public constant UINT_EXCHANGE_ERROR_SPACE = "UINT_EXCHANGE_ERROR_SPACE";
 
     // "CONTRACT_CONTRIBUTION_INCENTIVE_POOL" is too long for byted32
     // so compress it to what states below
     bytes32 public constant CONTRACT_CONTRIBUTION_INCENTIVE_POOL = "CONTRACT_CONTRIBUTION_POOL";
 
     bytes32 public constant CONTRACT_DEV_POOL = "CONTRACT_DEV_POOL";
+
+    bytes32 public constant CONTRACT_GENESIS_HOLDER = "CONTRACT_GENESIS_HOLDER";
 
 }

@@ -1,9 +1,7 @@
 pragma solidity ^0.4.24;
 
 import "@evolutionland/common/contracts/interfaces/ISettingsRegistry.sol";
-import "@evolutionland/common/contracts/interfaces/ERC223ReceivingContract.sol";
-import "@evolutionland/common/contracts/interfaces/ERC223.sol";
-import "@evolutionland/common/contracts/interfaces/IUserPoints.sol";
+// import "@evolutionland/common/contracts/interfaces/IUserPoints.sol";
 import "@evolutionland/common/contracts/DSAuth.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "./AuctionSettingIds.sol";
@@ -15,7 +13,7 @@ import "./AuctionSettingIds.sol";
  */
 
 // Use proxy mode
-contract RevenuePoolV3 is DSAuth, ERC223ReceivingContract, AuctionSettingIds {
+contract RevenuePoolV3 is DSAuth, AuctionSettingIds {
 
     bool private singletonLock = false;
 
@@ -49,20 +47,6 @@ contract RevenuePoolV3 is DSAuth, ERC223ReceivingContract, AuctionSettingIds {
         registry = ISettingsRegistry(_registry);
     }
 
-    function tokenFallback(address /*_from*/, uint256 _value, bytes _data) public {
-
-        address ring = registry.addressOf(SettingIds.CONTRACT_RING_ERC20_TOKEN);
-        address userPoints = registry.addressOf(SettingIds.CONTRACT_USER_POINTS);
-
-        if(msg.sender == ring) {
-            address buyer = bytesToAddress(_data);
-            // should same with trading reward percentage in settleToken;
-
-            IUserPoints(userPoints).addPoints(buyer, _value / 1000);
-        }
-    }
-
-
     function settleToken(address _tokenAddress) public {
         uint balance = ERC20(_tokenAddress).balanceOf(address(this));
 
@@ -75,9 +59,9 @@ contract RevenuePoolV3 is DSAuth, ERC223ReceivingContract, AuctionSettingIds {
 
             require(pointsRewardPool != 0x0 && contributionIncentivePool != 0x0 && governorPool != 0x0 && devPool != 0x0, "invalid addr");
 
-            require(ERC223(_tokenAddress).transfer(pointsRewardPool, balance * 4 / 10, "0x0"));
-            require(ERC223(_tokenAddress).transfer(contributionIncentivePool, balance * 3 / 10, "0x0"));
-            require(ERC223(_tokenAddress).transfer(devPool, balance * 3 / 10, "0x0"));
+            require(ERC20(_tokenAddress).transfer(pointsRewardPool, balance * 4 / 10));
+            require(ERC20(_tokenAddress).transfer(contributionIncentivePool, balance * 3 / 10));
+            require(ERC20(_tokenAddress).transfer(devPool, balance * 3 / 10));
         }
 
     }
@@ -98,14 +82,4 @@ contract RevenuePoolV3 is DSAuth, ERC223ReceivingContract, AuctionSettingIds {
 
         emit ClaimedTokens(_token, msg.sender, balance);
     }
-
-    function bytesToAddress(bytes b) public pure returns (address) {
-        bytes32 out;
-
-        for (uint i = 0; i < 32; i++) {
-            out |= bytes32(b[i] & 0xFF) >> (i * 8);
-        }
-        return address(out);
-    }
-
 }
