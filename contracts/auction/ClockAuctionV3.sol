@@ -9,7 +9,7 @@ import "@evolutionland/common/contracts/interfaces/IUserPoints.sol";
 import "./interfaces/IMysteriousTreasure.sol";
 import "./AuctionSettingIds.sol";
 
-contract ClockAuctionV2 is PausableDSAuth, AuctionSettingIds {
+contract ClockAuctionV3 is PausableDSAuth, AuctionSettingIds {
     using SafeMath for *;
     event AuctionCreated(
         uint256 tokenId, address seller, uint256 startingPriceInToken, uint256 endingPriceInToken, uint256 duration, address token
