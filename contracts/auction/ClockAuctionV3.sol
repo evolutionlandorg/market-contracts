@@ -241,7 +241,7 @@ contract ClockAuctionV3 is PausableDSAuth, AuctionSettingIds {
 
 
     // @dev bid with RING. Computes the price and transfers winnings.
-    function bidWithToken(address _from, uint256 _tokenId, address _referer) public whenNotPaused returns (uint256){
+    function bidWithToken(uint256 _tokenId, address _referer) public whenNotPaused returns (uint256){
         require(tokenIdToAuction[_tokenId].startedAt > 0);
         // Get a reference to the auction struct
         Auction storage auction = tokenIdToAuction[_tokenId];
@@ -251,10 +251,10 @@ contract ClockAuctionV3 is PausableDSAuth, AuctionSettingIds {
 
         uint bidMoment;
         uint returnToLastBidder;
-        (bidMoment, returnToLastBidder) = _bidProcess(_from, auction, priceInToken, _referer);
+        (bidMoment, returnToLastBidder) = _bidProcess(msg.sender, auction, priceInToken, _referer);
 
         // Tell the world!
-        emit NewBid(_tokenId, _from, _referer, priceInToken, auction.token, bidMoment, returnToLastBidder);
+        emit NewBid(_tokenId, msg.sender, _referer, priceInToken, auction.token, bidMoment, returnToLastBidder);
 
         return priceInToken;
     }
