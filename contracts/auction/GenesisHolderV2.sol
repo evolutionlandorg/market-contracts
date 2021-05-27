@@ -4,11 +4,10 @@ import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "openzeppelin-solidity/contracts/token/ERC721/ERC721Basic.sol";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "@evolutionland/common/contracts/interfaces/ISettingsRegistry.sol";
-import "@evolutionland/common/contracts/interfaces/ERC223.sol";
 import "./interfaces/IClockAuction.sol";
 import "./AuctionSettingIds.sol";
 
-contract GenesisHolder is Ownable, AuctionSettingIds {
+contract GenesisHolderV2 is Ownable, AuctionSettingIds {
 
     bool private singletonLock = false;
 
@@ -39,18 +38,6 @@ contract GenesisHolder is Ownable, AuctionSettingIds {
 
         registry = _registry;
     }
-
-    function tokenFallback(address /*_from*/, uint256 _value, bytes _data) public {
-
-        address ring = registry.addressOf(SettingIds.CONTRACT_RING_ERC20_TOKEN);
-        address kton = registry.addressOf(SettingIds.CONTRACT_KTON_ERC20_TOKEN);
-        address revenuePool = registry.addressOf(CONTRACT_REVENUE_POOL);
-
-        if(msg.sender == ring || msg.sender == kton) {
-            ERC223(msg.sender).transfer(revenuePool, _value, _data);
-        }
-    }
-
 
     function createAuction(
         uint256 _tokenId,
