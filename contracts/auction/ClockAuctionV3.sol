@@ -5,8 +5,8 @@ import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "@evolutionland/common/contracts/interfaces/ISettingsRegistry.sol";
 import "@evolutionland/common/contracts/PausableDSAuth.sol";
-import "@evolutionland/common/contracts/interfaces/IUserPoints.sol";
 import "./interfaces/IMysteriousTreasure.sol";
+import "./interfaces/IRevenuePool.sol";
 import "./AuctionSettingIds.sol";
 
 contract ClockAuctionV3 is PausableDSAuth, AuctionSettingIds {
@@ -285,35 +285,25 @@ contract ClockAuctionV3 is PausableDSAuth, AuctionSettingIds {
     }
 
     function _sellerPay(address _token, address _pool, address _seller, address _buyer, uint256 _value) internal {
-        address userPoints = registry.addressOf(SettingIds.CONTRACT_USER_POINTS);
-        address ring = registry.addressOf(SettingIds.CONTRACT_RING_ERC20_TOKEN);
         if (_seller == registry.addressOf(AuctionSettingIds.CONTRACT_GENESIS_HOLDER)) {
-            ERC20(_token).transfer(_pool, _value);
-            if (_token == ring) {
-                IUserPoints(userPoints).addPoints(_buyer, _value);
-            }
+            ERC20(_token).approve(_pool, _value);
+            IRevenuePool(_pool).reward(_token, _value, _buyer);
         } else {
             ERC20(_token).transfer(_seller, _value);
         }
     }
 
     function _deductFee(address _referer, address _token, address _pool, address _buyer, uint256 _ownerCutAmount) internal {
-        address userPoints = registry.addressOf(SettingIds.CONTRACT_USER_POINTS);
-        address ring = registry.addressOf(SettingIds.CONTRACT_RING_ERC20_TOKEN);
         uint256 refererCut = registry.uintOf(UINT_REFERER_CUT);
         if (_referer != 0x0) {
             uint256 refererBounty = computeCut(_ownerCutAmount, refererCut);
             uint256 fee = _ownerCutAmount - refererBounty;
             ERC20(_token).transfer(_referer, refererBounty);
-            ERC20(_token).transfer(_pool, fee);
-            if (_token == ring) {
-                IUserPoints(userPoints).addPoints(_buyer, fee);
-            }
+            ERC20(_token).approve(_pool, fee);
+            IRevenuePool(_pool).reward(_token, fee, _buyer);
         } else {
-            ERC20(_token).transfer(_pool, _ownerCutAmount);
-            if (_token == ring) {
-                IUserPoints(userPoints).addPoints(_buyer, _ownerCutAmount);
-            }
+            ERC20(_token).approve(_pool, _ownerCutAmount);
+            IRevenuePool(_pool).reward(_token, _ownerCutAmount, _buyer);
         }
     }
 

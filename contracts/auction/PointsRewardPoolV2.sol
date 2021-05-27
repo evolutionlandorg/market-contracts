@@ -2,9 +2,10 @@ pragma solidity ^0.4.24;
 
 import "@evolutionland/common/contracts/PausableDSAuth.sol";
 import "@evolutionland/common/contracts/interfaces/ISettingsRegistry.sol";
+import "@evolutionland/common/contracts/interfaces/IUserPoints.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "./RevenuePool.sol";
+import "./interfaces/IRevenuePool.sol";
 import "./AuctionSettingIds.sol";
 
 contract PointsRewardPoolV2 is PausableDSAuth, AuctionSettingIds {
@@ -60,7 +61,7 @@ contract PointsRewardPoolV2 is PausableDSAuth, AuctionSettingIds {
         address revenuePool = registry.addressOf(CONTRACT_REVENUE_POOL);
         IUserPoints userPoints = IUserPoints(registry.addressOf(CONTRACT_USER_POINTS));
 
-        RevenuePool(revenuePool)
+        IRevenuePool(revenuePool)
             .settleToken(registry.addressOf(CONTRACT_RING_ERC20_TOKEN));
 
         userPoints.subPoints(msg.sender, _pointAmount);

@@ -1,7 +1,7 @@
 pragma solidity ^0.4.24;
 
 import "@evolutionland/common/contracts/interfaces/ISettingsRegistry.sol";
-// import "@evolutionland/common/contracts/interfaces/IUserPoints.sol";
+import "@evolutionland/common/contracts/interfaces/IUserPoints.sol";
 import "@evolutionland/common/contracts/DSAuth.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "./AuctionSettingIds.sol";
@@ -46,6 +46,17 @@ contract RevenuePoolV3 is DSAuth, AuctionSettingIds {
 
         registry = ISettingsRegistry(_registry);
     }
+
+    function reward(address _token, uint256 _value, address _buyer) public {
+        require((ERC20(_token).transferFrom(msg.sender, address(this), _value)), "transfer failed!");
+        address ring = registry.addressOf(SettingIds.CONTRACT_RING_ERC20_TOKEN);
+        if(_token == ring) {
+            address userPoints = registry.addressOf(SettingIds.CONTRACT_USER_POINTS);
+            // should same with trading reward percentage in settleToken;
+            IUserPoints(userPoints).addPoints(_buyer, _value / 1000);
+        }
+    }
+
 
     function settleToken(address _tokenAddress) public {
         uint balance = ERC20(_tokenAddress).balanceOf(address(this));
