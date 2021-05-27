@@ -242,9 +242,9 @@ contract ClockAuctionV3 is PausableDSAuth, AuctionSettingIds {
 
     // @dev bid with RING. Computes the price and transfers winnings.
     function bidWithToken(uint256 _tokenId, address _referer) public whenNotPaused returns (uint256){
-        require(tokenIdToAuction[_tokenId].startedAt > 0);
-        // Get a reference to the auction struct
         Auction storage auction = tokenIdToAuction[_tokenId];
+        require(auction.startedAt > 0);
+        // Get a reference to the auction struct
         // Check that the incoming bid is higher than the current price
         uint priceInToken = getCurrentPriceInToken(_tokenId);
         require(ERC20(auction.token).transferFrom(msg.sender, address(this), priceInToken), 'transfer failed');
