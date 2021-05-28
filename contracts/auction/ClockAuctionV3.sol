@@ -249,10 +249,6 @@ contract ClockAuctionV3 is PausableDSAuth, AuctionSettingIds {
         uint priceInToken = getCurrentPriceInToken(_tokenId);
         require(_amountMax >= priceInToken,
             "your offer is lower than the current price, try again with a higher one.");
-        uint refund = _amountMax - priceInToken;
-        if (refund > 0) {
-            ERC20(auction.token).transfer(msg.sender, refund);
-        }
 
         require(ERC20(auction.token).transferFrom(msg.sender, address(this), priceInToken), 'transfer failed');
 
