@@ -2,12 +2,12 @@ pragma solidity ^0.4.23;
 
 import "openzeppelin-solidity/contracts/token/ERC721/ERC721Basic.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "@evolutionland/common/contracts/interfaces/ISettingsRegistry.sol";
 import "@evolutionland/common/contracts/PausableDSAuth.sol";
 import "./interfaces/IMysteriousTreasure.sol";
 import "./interfaces/IRevenuePool.sol";
 import "./AuctionSettingIds.sol";
+import "./interfaces/IERC20.sol";
 
 contract ClockAuctionV3 is PausableDSAuth, AuctionSettingIds {
     using SafeMath for *;
@@ -250,7 +250,7 @@ contract ClockAuctionV3 is PausableDSAuth, AuctionSettingIds {
         require(_amountMax >= priceInToken,
             "your offer is lower than the current price, try again with a higher one.");
 
-        require(ERC20(auction.token).transferFrom(msg.sender, address(this), priceInToken), 'transfer failed');
+        require(IERC20(auction.token).transferFrom(msg.sender, address(this), priceInToken), 'transfer failed');
 
         uint bidMoment;
         uint returnToLastBidder;
@@ -289,10 +289,10 @@ contract ClockAuctionV3 is PausableDSAuth, AuctionSettingIds {
 
     function _sellerPay(address _token, address _pool, address _seller, address _buyer, uint256 _value) internal {
         if (_seller == registry.addressOf(AuctionSettingIds.CONTRACT_GENESIS_HOLDER)) {
-            ERC20(_token).approve(_pool, _value);
+            IERC20(_token).approve(_pool, _value);
             IRevenuePool(_pool).reward(_token, _value, _buyer);
         } else {
-            ERC20(_token).transfer(_seller, _value);
+            IERC20(_token).transfer(_seller, _value);
         }
     }
 
@@ -301,11 +301,11 @@ contract ClockAuctionV3 is PausableDSAuth, AuctionSettingIds {
         if (_referer != 0x0) {
             uint256 refererBounty = computeCut(_ownerCutAmount, refererCut);
             uint256 fee = _ownerCutAmount - refererBounty;
-            ERC20(_token).transfer(_referer, refererBounty);
-            ERC20(_token).approve(_pool, fee);
+            IERC20(_token).transfer(_referer, refererBounty);
+            IERC20(_token).approve(_pool, fee);
             IRevenuePool(_pool).reward(_token, fee, _buyer);
         } else {
-            ERC20(_token).approve(_pool, _ownerCutAmount);
+            IERC20(_token).approve(_pool, _ownerCutAmount);
             IRevenuePool(_pool).reward(_token, _ownerCutAmount, _buyer);
         }
     }
@@ -348,7 +348,7 @@ contract ClockAuctionV3 is PausableDSAuth, AuctionSettingIds {
         uint returnToLastBidder = realReturnForEach + uint256(_auction.lastRecord);
         // here use transfer(address,uint256) for safety
         _sellerPay(_auction.token, _pool, _auction.seller, _buyer, realReturnForEach);
-        ERC20(_auction.token).transfer(_auction.lastBidder, returnToLastBidder);
+        IERC20(_auction.token).transfer(_auction.lastBidder, returnToLastBidder);
 
         // deduct fee
         _deductFee(_referer, _auction.token, _pool, _buyer, poolCutAmount);
@@ -398,7 +398,7 @@ contract ClockAuctionV3 is PausableDSAuth, AuctionSettingIds {
             owner.transfer(address(this).balance);
             return;
         }
-        ERC20 token = ERC20(_token);
+        IERC20 token = IERC20(_token);
         uint balance = token.balanceOf(address(this));
         token.transfer(owner, balance);
 

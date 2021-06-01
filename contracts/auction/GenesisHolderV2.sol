@@ -1,11 +1,11 @@
 pragma solidity ^0.4.24;
 
-import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "openzeppelin-solidity/contracts/token/ERC721/ERC721Basic.sol";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "@evolutionland/common/contracts/interfaces/ISettingsRegistry.sol";
 import "./interfaces/IClockAuction.sol";
 import "./AuctionSettingIds.sol";
+import "./interfaces/IERC20.sol";
 
 contract GenesisHolderV2 is Ownable, AuctionSettingIds {
 
@@ -74,7 +74,7 @@ contract GenesisHolderV2 is Ownable, AuctionSettingIds {
             owner.transfer(address(this).balance);
             return;
         }
-        ERC20 token = ERC20(_token);
+        IERC20 token = IERC20(_token);
         uint balance = token.balanceOf(address(this));
         token.transfer(owner, balance);
 

@@ -3,7 +3,7 @@ pragma solidity ^0.4.24;
 import "@evolutionland/common/contracts/interfaces/ISettingsRegistry.sol";
 import "@evolutionland/common/contracts/interfaces/IUserPoints.sol";
 import "@evolutionland/common/contracts/DSAuth.sol";
-import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
+import "./interfaces/IERC20.sol";
 import "./AuctionSettingIds.sol";
 
 /**
@@ -48,7 +48,7 @@ contract RevenuePoolV3 is DSAuth, AuctionSettingIds {
     }
 
     function reward(address _token, uint256 _value, address _buyer) public {
-        require((ERC20(_token).transferFrom(msg.sender, address(this), _value)), "transfer failed!");
+        require((IERC20(_token).transferFrom(msg.sender, address(this), _value)), "transfer failed!");
         address ring = registry.addressOf(SettingIds.CONTRACT_RING_ERC20_TOKEN);
         if(_token == ring) {
             address userPoints = registry.addressOf(SettingIds.CONTRACT_USER_POINTS);
@@ -59,7 +59,7 @@ contract RevenuePoolV3 is DSAuth, AuctionSettingIds {
 
 
     function settleToken(address _tokenAddress) public {
-        uint balance = ERC20(_tokenAddress).balanceOf(address(this));
+        uint balance = IERC20(_tokenAddress).balanceOf(address(this));
 
         // to save gas when playing
         if (balance > 10) {
@@ -70,9 +70,9 @@ contract RevenuePoolV3 is DSAuth, AuctionSettingIds {
 
             require(pointsRewardPool != 0x0 && contributionIncentivePool != 0x0 && governorPool != 0x0 && devPool != 0x0, "invalid addr");
 
-            require(ERC20(_tokenAddress).transfer(pointsRewardPool, balance * 4 / 10));
-            require(ERC20(_tokenAddress).transfer(contributionIncentivePool, balance * 3 / 10));
-            require(ERC20(_tokenAddress).transfer(devPool, balance * 3 / 10));
+            require(IERC20(_tokenAddress).transfer(pointsRewardPool, balance * 4 / 10));
+            require(IERC20(_tokenAddress).transfer(contributionIncentivePool, balance * 3 / 10));
+            require(IERC20(_tokenAddress).transfer(devPool, balance * 3 / 10));
         }
 
     }
@@ -87,7 +87,7 @@ contract RevenuePoolV3 is DSAuth, AuctionSettingIds {
             owner.transfer(address(this).balance);
             return;
         }
-        ERC20 token = ERC20(_token);
+        IERC20 token = IERC20(_token);
         uint balance = token.balanceOf(address(this));
         token.transfer(owner, balance);
 
