@@ -53,7 +53,7 @@ contract PointsRewardPoolV2 is PausableDSAuth, AuctionSettingIds {
     }
 
     function totalRewardInPool(address _token) public view returns (uint256) {
-        return IERC20(_token).balanceOf(address(this)) + IERC20(_token).balanceOf(registry.addressOf(CONTRACT_REVENUE_POOL)) * 4 / 10;
+        return IERC20(_token).balanceOf(address(this)) + IERC20(_token).balanceOf(registry.addressOf(CONTRACT_REVENUE_POOL)) / 10;
     }
 
     function _play(uint _pointAmount, uint _houseEdgeDenominator) internal {
