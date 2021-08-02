@@ -22,6 +22,7 @@ contract ClockAuctionV3 is PausableDSAuth, AuctionSettingIds {
     event ClaimedTokens(address indexed token, address indexed owner, uint amount);
 
     // new bid event
+    // TODO: missing previous lastbidder address
     event NewBid(
         uint256 indexed tokenId, address lastBidder, address lastReferer, uint256 lastRecord, address tokenAddress, uint256 bidStartAt, uint256 returnToLastBidder
     );
