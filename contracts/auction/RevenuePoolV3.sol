@@ -5,6 +5,7 @@ import "@evolutionland/common/contracts/interfaces/IUserPoints.sol";
 import "@evolutionland/common/contracts/DSAuth.sol";
 import "./interfaces/IERC20.sol";
 import "./AuctionSettingIds.sol";
+import "./interfaces/IGovernorPool.sol";
 
 /**
  * @title RevenuePool
@@ -65,14 +66,19 @@ contract RevenuePoolV3 is DSAuth, AuctionSettingIds {
         if (balance > 10) {
             address pointsRewardPool = registry.addressOf(AuctionSettingIds.CONTRACT_POINTS_REWARD_POOL);
             address contributionIncentivePool = registry.addressOf(AuctionSettingIds.CONTRACT_CONTRIBUTION_INCENTIVE_POOL);
-            address farmPool = registry.addressOf(CONTRACT_DIVIDENDS_POOL);
+            address governorPool = registry.addressOf(CONTRACT_DIVIDENDS_POOL);
             address devPool = registry.addressOf(AuctionSettingIds.CONTRACT_DEV_POOL);
 
-            require(pointsRewardPool != 0x0 && contributionIncentivePool != 0x0 && farmPool != 0x0  && devPool != 0x0, "invalid addr");
+            require(pointsRewardPool != 0x0 && contributionIncentivePool != 0x0 && governorPool != 0x0  && devPool != 0x0, "invalid addr");
 
             require(IERC20(_tokenAddress).transfer(pointsRewardPool, balance * 1 / 10));
             require(IERC20(_tokenAddress).transfer(contributionIncentivePool, balance * 3 / 10));
-            require(IERC20(_tokenAddress).transfer(farmPool, balance * 3 / 10));
+
+            if (IGovernorPool(governorPool).checkRewardAvailable(_tokenAddress)) {
+                IERC20(_tokenAddress).approve(governorPool, balance * 3 / 10);
+                IGovernorPool(governorPool).rewardAmount(balance * 3 / 10);
+            }
+
             require(IERC20(_tokenAddress).transfer(devPool, balance * 3 / 10));
         }
 
