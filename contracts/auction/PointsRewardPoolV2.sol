@@ -67,12 +67,13 @@ contract PointsRewardPoolV2 is PausableDSAuth, AuctionSettingIds {
         userPoints.subPoints(msg.sender, _pointAmount);
 
         uint256 seed = uint256(keccak256(abi.encodePacked(
-                (block.timestamp).add
-                (block.difficulty).add
-                ((uint256(keccak256(abi.encodePacked(block.coinbase)))) / (now)).add
-                (block.gaslimit).add
-                ((uint256(keccak256(abi.encodePacked(tx.origin)))) / (now)).add
-                (block.number)
+                gasleft(),
+                block.timestamp,
+                block.difficulty,
+                block.coinbase,
+                block.gaslimit,
+                tx.origin,
+                block.number
             )));
 
         // first part
