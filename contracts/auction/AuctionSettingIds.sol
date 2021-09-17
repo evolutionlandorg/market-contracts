@@ -31,4 +31,5 @@ contract AuctionSettingIds is SettingIds {
 
     bytes32 public constant CONTRACT_GENESIS_HOLDER = "CONTRACT_GENESIS_HOLDER";
 
+    bytes32 public constant CONTRACT_FARM_POOL = "CONTRACT_FARM_POOL";
 }
