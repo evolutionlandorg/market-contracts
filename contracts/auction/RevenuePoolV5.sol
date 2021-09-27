@@ -6,6 +6,7 @@ import "@evolutionland/common/contracts/DSAuth.sol";
 import "./interfaces/IERC20.sol";
 import "./AuctionSettingIds.sol";
 import "./interfaces/IGovernorPool.sol";
+import "./interfaces/IStakingRewardsFactory.sol";
 
 /**
  * @title RevenuePool
@@ -77,6 +78,7 @@ contract RevenuePoolV5 is DSAuth, AuctionSettingIds {
             require(IERC20(_tokenAddress).transfer(pointsRewardPool, balance * 10 / 100));
             require(IERC20(_tokenAddress).transfer(contributionIncentivePool, balance * 15 / 100));
             require(IERC20(_tokenAddress).transfer(farmPool, balance * 15 / 100));
+            IStakingRewardsFactory(farmPool).notifyRewardAmounts(balance * 15 / 100);
 
             if (IGovernorPool(governorPool).checkRewardAvailable(_tokenAddress)) {
                 IERC20(_tokenAddress).approve(governorPool, balance * 30 / 100);
