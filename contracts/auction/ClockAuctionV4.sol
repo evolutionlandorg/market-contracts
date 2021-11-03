@@ -55,6 +55,8 @@ contract ClockAuctionV4 is PausableDSAuth, AuctionSettingIds {
         uint48 lastBidStartAt;
         // lastBidder's referer
         address lastReferer;
+
+        uint256 firstPay;
     }
 
     bool private singletonLock = false;
@@ -281,6 +283,8 @@ contract ClockAuctionV4 is PausableDSAuth, AuctionSettingIds {
         address lastBidder = auction.lastBidder;
         uint lastRecord = auction.lastRecord;
 
+        _sellerPay(auction.token, registry.addressOf(CONTRACT_REVENUE_POOL), auction.seller, auction.lastBidder, auction.firstPay);
+
         delete tokenIdToAuction[_tokenId];
 
         ERC721Basic(registry.addressOf(SettingIds.CONTRACT_OBJECT_OWNERSHIP)).safeTransferFrom(this, lastBidder, _tokenId);
@@ -318,8 +322,9 @@ contract ClockAuctionV4 is PausableDSAuth, AuctionSettingIds {
         //  value <= price, so this subtraction can't go negative.)
         // TODO: token to the seller
         uint256 ownerCutAmount = computeCut(_priceInToken, _auctionCut);
-        // transfer to the seller
-        _sellerPay(_auction.token, _pool, _auction.seller, _buyer, (_priceInToken - ownerCutAmount));
+        // transfer to the address(this)
+        // _sellerPay(_auction.token, _pool, address(this), _buyer, (_priceInToken - ownerCutAmount));
+        _auction.firstPay = _priceInToken - ownerCutAmount;
 
         // deduct fee
         _deductFee(_referer, _auction.token, _pool, _buyer, ownerCutAmount);
@@ -564,7 +569,8 @@ contract ClockAuctionV4 is PausableDSAuth, AuctionSettingIds {
             // all set to zero when initialized
             lastBidder: address(0),
             lastBidStartAt: 0,
-            lastReferer: address(0)
+            lastReferer: address(0),
+            firstPay: 0
             });
 
         emit AuctionCreated(_tokenId, _seller, _startingPriceInToken, _endingPriceInToken, _duration, _token);
