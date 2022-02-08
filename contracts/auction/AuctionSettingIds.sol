@@ -11,6 +11,9 @@ contract AuctionSettingIds is SettingIds {
     // if someone else bid the same auction with higher price and within bidWaitingTime, your bid failed.
     bytes32 public constant UINT_AUCTION_BID_WAITING_TIME = "UINT_AUCTION_BID_WAITING_TIME";
 
+    bytes32 public constant UINT_SMALL_TICKET_FEE = "UINT_SMALL_TICKET_FEE";
+    bytes32 public constant UINT_LARGE_TICKET_FEE = "UINT_LARGE_TICKET_FEE";
+
 
     bytes32 public constant CONTRACT_MYSTERIOUS_TREASURE = "CONTRACT_MYSTERIOUS_TREASURE";
 
