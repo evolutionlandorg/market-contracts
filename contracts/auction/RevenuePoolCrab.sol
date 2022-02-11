@@ -15,7 +15,7 @@ import "./interfaces/IStakingRewardsFactory.sol";
  */
 
 // Use proxy mode
-contract RevenuePoolV6 is DSAuth, AuctionSettingIds {
+contract RevenuePoolCrab is DSAuth, AuctionSettingIds {
 
     bool private singletonLock = false;
 
