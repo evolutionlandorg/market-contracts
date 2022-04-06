@@ -63,6 +63,9 @@ contract RevenuePoolV6 is DSAuth, AuctionSettingIds {
 
 
     function settleToken(address _tokenAddress) public {
+        address ring = registry.addressOf(SettingIds.CONTRACT_RING_ERC20_TOKEN);
+        require(ring == _tokenAddress, "only ring");
+
         uint balance = IERC20(_tokenAddress).balanceOf(address(this));
 
         // to save gas when playing
