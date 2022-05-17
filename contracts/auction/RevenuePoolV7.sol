@@ -15,7 +15,7 @@ import "./interfaces/IStakingRewardsFactory.sol";
  */
 
 // Use proxy mode
-contract RevenuePoolCrab is DSAuth, AuctionSettingIds {
+contract RevenuePoolV7 is DSAuth, AuctionSettingIds {
 
     bool private singletonLock = false;
 
@@ -63,6 +63,7 @@ contract RevenuePoolCrab is DSAuth, AuctionSettingIds {
     function settleToken(address _tokenAddress) public {
         address ring = registry.addressOf(SettingIds.CONTRACT_RING_ERC20_TOKEN);
         require(ring == _tokenAddress, "only ring");
+
         uint balance = IERC20(_tokenAddress).balanceOf(address(this));
 
         // to save gas when playing
@@ -72,13 +73,14 @@ contract RevenuePoolCrab is DSAuth, AuctionSettingIds {
             address governorPool = registry.addressOf(CONTRACT_DIVIDENDS_POOL);
             address devPool = registry.addressOf(AuctionSettingIds.CONTRACT_DEV_POOL);
 
-            require(pointsRewardPool != 0x0 && contributionIncentivePool != 0x0 &&  governorPool != 0x0  && devPool != 0x0, "invalid addr");
+            require(pointsRewardPool != 0x0 && contributionIncentivePool != 0x0 && governorPool != 0x0  && devPool != 0x0, "invalid addr");
 
             require(IERC20(_tokenAddress).transfer(pointsRewardPool, balance * 10 / 100));
             require(IERC20(_tokenAddress).transfer(contributionIncentivePool, balance * 30 / 100));
 
             require(IERC20(_tokenAddress).transfer(governorPool, balance * 30 / 100));
             IStakingRewardsFactory(governorPool).notifyRewardAmounts(balance * 20 / 100);
+
             require(IERC20(_tokenAddress).transfer(devPool, balance * 30 / 100));
         }
 

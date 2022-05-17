@@ -23,7 +23,7 @@ contract RevenuePoolV3 is DSAuth, AuctionSettingIds {
 //    // 30%
 //    address public contributionIncentivePool;
 //    // 30%
-//    address public dividendsPool(temp is farm, later is gov);
+//    address public dividendsPool(farm);
 //    // 30%
 //    address public devPool;
 
