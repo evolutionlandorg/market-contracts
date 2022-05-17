@@ -5,7 +5,6 @@ import "@evolutionland/common/contracts/interfaces/IUserPoints.sol";
 import "@evolutionland/common/contracts/DSAuth.sol";
 import "./interfaces/IERC20.sol";
 import "./AuctionSettingIds.sol";
-import "./interfaces/IGovernorPool.sol";
 import "./interfaces/IStakingRewardsFactory.sol";
 
 /**

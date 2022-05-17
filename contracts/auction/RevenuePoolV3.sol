@@ -5,7 +5,7 @@ import "@evolutionland/common/contracts/interfaces/IUserPoints.sol";
 import "@evolutionland/common/contracts/DSAuth.sol";
 import "./interfaces/IERC20.sol";
 import "./AuctionSettingIds.sol";
-import "./interfaces/IGovernorPool.sol";
+import "./interfaces/IStakingRewardsFactory.sol";
 
 /**
  * @title RevenuePool
@@ -60,10 +60,13 @@ contract RevenuePoolV3 is DSAuth, AuctionSettingIds {
 
 
     function settleToken(address _tokenAddress) public {
+        address ring = registry.addressOf(SettingIds.CONTRACT_RING_ERC20_TOKEN);
+        require(ring == _tokenAddress, "only ring");
+
         uint balance = IERC20(_tokenAddress).balanceOf(address(this));
 
         // to save gas when playing
-        if (balance > 10) {
+        if (balance > 100) {
             address pointsRewardPool = registry.addressOf(AuctionSettingIds.CONTRACT_POINTS_REWARD_POOL);
             address contributionIncentivePool = registry.addressOf(AuctionSettingIds.CONTRACT_CONTRIBUTION_INCENTIVE_POOL);
             address farmPool = registry.addressOf(CONTRACT_DIVIDENDS_POOL);
@@ -74,6 +77,7 @@ contract RevenuePoolV3 is DSAuth, AuctionSettingIds {
             require(IERC20(_tokenAddress).transfer(pointsRewardPool, balance * 1 / 10));
             require(IERC20(_tokenAddress).transfer(contributionIncentivePool, balance * 3 / 10));
             require(IERC20(_tokenAddress).transfer(farmPool, balance * 3 / 10));
+            IStakingRewardsFactory(farmPool).notifyRewardAmounts(balance * 2 / 10);
             require(IERC20(_tokenAddress).transfer(devPool, balance * 3 / 10));
         }
 
