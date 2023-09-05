@@ -1,0 +1,1 @@
+[{"constant":false,"inputs":[{"name":"_amount","type":"uint256"}],"name":"rewardAmount","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"name":"_token","type":"address"}],"name":"checkRewardAvailable","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"view","type":"function"}]

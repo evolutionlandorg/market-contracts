@@ -2,12 +2,13 @@ pragma solidity ^0.4.24;
 
 import "@evolutionland/common/contracts/PausableDSAuth.sol";
 import "@evolutionland/common/contracts/interfaces/ISettingsRegistry.sol";
-import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
+import "@evolutionland/common/contracts/interfaces/IUserPoints.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "./RevenuePool.sol";
+import "./interfaces/IRevenuePool.sol";
 import "./AuctionSettingIds.sol";
+import "./interfaces/IERC20.sol";
 
-contract PointsRewardPool is PausableDSAuth, AuctionSettingIds {
+contract PointsRewardPoolV2 is PausableDSAuth, AuctionSettingIds {
     using SafeMath for *;
 
     event RewardClaimedWithPoints(address indexed user, uint256 pointAmount, uint256 rewardAmount);
@@ -43,10 +44,6 @@ contract PointsRewardPool is PausableDSAuth, AuctionSettingIds {
         registry = ISettingsRegistry(_registry);
     }
 
-    function tokenFallback(address /*_from*/, uint256 /*_value*/, bytes /*_data*/) public pure {
-        return;
-    }
-
     function playWithSmallTicket() public isHuman whenNotPaused {
         _play(10 ether, 8);
     }
@@ -56,7 +53,7 @@ contract PointsRewardPool is PausableDSAuth, AuctionSettingIds {
     }
 
     function totalRewardInPool(address _token) public view returns (uint256) {
-        return ERC20(_token).balanceOf(address(this)) + ERC20(_token).balanceOf(registry.addressOf(CONTRACT_REVENUE_POOL)) / 10;
+        return IERC20(_token).balanceOf(address(this)) + IERC20(_token).balanceOf(registry.addressOf(CONTRACT_REVENUE_POOL)) / 10;
     }
 
     function _play(uint _pointAmount, uint _houseEdgeDenominator) internal {
@@ -64,18 +61,19 @@ contract PointsRewardPool is PausableDSAuth, AuctionSettingIds {
         address revenuePool = registry.addressOf(CONTRACT_REVENUE_POOL);
         IUserPoints userPoints = IUserPoints(registry.addressOf(CONTRACT_USER_POINTS));
 
-        RevenuePool(revenuePool)
+        IRevenuePool(revenuePool)
             .settleToken(registry.addressOf(CONTRACT_RING_ERC20_TOKEN));
 
         userPoints.subPoints(msg.sender, _pointAmount);
 
         uint256 seed = uint256(keccak256(abi.encodePacked(
-                (block.timestamp).add
-                (block.difficulty).add
-                ((uint256(keccak256(abi.encodePacked(block.coinbase)))) / (now)).add
-                (block.gaslimit).add
-                ((uint256(keccak256(abi.encodePacked(tx.origin)))) / (now)).add
-                (block.number)
+                gasleft(),
+                block.timestamp,
+                block.difficulty,
+                block.coinbase,
+                block.gaslimit,
+                tx.origin,
+                block.number
             )));
 
         // first part
@@ -96,9 +94,9 @@ contract PointsRewardPool is PausableDSAuth, AuctionSettingIds {
             rewardPoints = pointsSupply;
         }
 
-        uint256 rewardTokens = rewardPoints.mul(ERC20(ring).balanceOf(address(this))).div(pointsSupply);
+        uint256 rewardTokens = rewardPoints.mul(IERC20(ring).balanceOf(address(this))).div(pointsSupply);
 
-        ERC20(ring).transfer(msg.sender, rewardTokens);
+        IERC20(ring).transfer(msg.sender, rewardTokens);
 
         emit RewardClaimedWithPoints(msg.sender, _pointAmount, rewardTokens);
     }
@@ -112,7 +110,7 @@ contract PointsRewardPool is PausableDSAuth, AuctionSettingIds {
             owner.transfer(address(this).balance);
             return;
         }
-        ERC20 token = ERC20(_token);
+        IERC20 token = IERC20(_token);
         uint balance = token.balanceOf(address(this));
         token.transfer(owner, balance);
 

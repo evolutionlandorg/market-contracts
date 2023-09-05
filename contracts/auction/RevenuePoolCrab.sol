@@ -5,6 +5,7 @@ import "@evolutionland/common/contracts/interfaces/IUserPoints.sol";
 import "@evolutionland/common/contracts/DSAuth.sol";
 import "./interfaces/IERC20.sol";
 import "./AuctionSettingIds.sol";
+import "./interfaces/IGovernorPool.sol";
 import "./interfaces/IStakingRewardsFactory.sol";
 
 /**
@@ -14,7 +15,7 @@ import "./interfaces/IStakingRewardsFactory.sol";
  */
 
 // Use proxy mode
-contract RevenuePoolV3 is DSAuth, AuctionSettingIds {
+contract RevenuePoolCrab is DSAuth, AuctionSettingIds {
 
     bool private singletonLock = false;
 
@@ -23,7 +24,7 @@ contract RevenuePoolV3 is DSAuth, AuctionSettingIds {
 //    // 30%
 //    address public contributionIncentivePool;
 //    // 30%
-//    address public dividendsPool(farm);
+//    address public dividendsPool(farmPool 20% reserved 10%);
 //    // 30%
 //    address public devPool;
 
@@ -62,25 +63,24 @@ contract RevenuePoolV3 is DSAuth, AuctionSettingIds {
     function settleToken(address _tokenAddress) public {
         address ring = registry.addressOf(SettingIds.CONTRACT_RING_ERC20_TOKEN);
         require(ring == _tokenAddress, "only ring");
-
         uint balance = IERC20(_tokenAddress).balanceOf(address(this));
 
         // to save gas when playing
         if (balance > 100) {
             address pointsRewardPool = registry.addressOf(AuctionSettingIds.CONTRACT_POINTS_REWARD_POOL);
             address contributionIncentivePool = registry.addressOf(AuctionSettingIds.CONTRACT_CONTRIBUTION_INCENTIVE_POOL);
-            address farmPool = registry.addressOf(CONTRACT_DIVIDENDS_POOL);
+            // address governorPool = registry.addressOf(CONTRACT_DIVIDENDS_POOL);
             address devPool = registry.addressOf(AuctionSettingIds.CONTRACT_DEV_POOL);
 
-            require(pointsRewardPool != 0x0 && contributionIncentivePool != 0x0 && farmPool != 0x0  && devPool != 0x0, "invalid addr");
+            require(pointsRewardPool != 0x0 && contributionIncentivePool != 0x0 && devPool != 0x0, "invalid addr");
 
-            require(IERC20(_tokenAddress).transfer(pointsRewardPool, balance * 1 / 10));
-            require(IERC20(_tokenAddress).transfer(contributionIncentivePool, balance * 3 / 10));
-            require(IERC20(_tokenAddress).transfer(farmPool, balance * 3 / 10));
-            IStakingRewardsFactory(farmPool).notifyRewardAmounts(balance * 2 / 10);
-            require(IERC20(_tokenAddress).transfer(devPool, balance * 3 / 10));
+            require(IERC20(_tokenAddress).transfer(pointsRewardPool, balance * 10 / 100));
+            require(IERC20(_tokenAddress).transfer(contributionIncentivePool, balance * 30 / 100));
+
+            // require(IERC20(_tokenAddress).transfer(governorPool, balance * 30 / 100));
+            // IStakingRewardsFactory(governorPool).notifyRewardAmounts(balance * 20 / 100);
+            require(IERC20(_tokenAddress).transfer(devPool, balance * 30 / 100));
         }
-
     }
 
 
